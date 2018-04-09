@@ -229,9 +229,6 @@ class NameHandler(BaseHandler):
         return datetime(*dt_args)
 
     def set(self, p, dt):
-        # dirname = os.path.dirname(filepath)
-        # name, ext = os.path.splitext(os.path.basename(filepath))
-
         fmt = re.sub(r'%([0-9]*)i', r'{_ocd_index:\1}', self.format)
 
         fmt = fmt.format(_ocd_index=self._counter)
@@ -291,6 +288,11 @@ class App:
 
         try:
             dt = self.src.get(p)
+        except RequiredDataNotFoundError as e:
+            msg = "{path}: {err}"
+            msg = msg.format(path=p, err=e)
+            self.logger.error(msg)
+            return
         except ValueError as e:
             msg = "{path}: {err}"
             msg = msg.format(path=p, err=e)
