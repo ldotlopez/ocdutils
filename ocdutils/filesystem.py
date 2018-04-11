@@ -30,6 +30,17 @@ class RenameOperation(Operation):
         self.dest = dest
 
 
+class ChmodOperation(Operation):
+    def __init__(self, path, mode):
+        self.path = path
+        self.mode = mode
+
+
+class DeleteOperation(Operation):
+    def __init__(self, path):
+        self.path = path
+
+
 class SetTimestampOperation(Operation):
     def __init__(self, path, timestamp, set_mtime=True, set_atime=True):
         self.path = path
@@ -121,8 +132,18 @@ class DryRunFilesystem(_BaseFilesystem):
                 args=args)
             print(cmd)
 
+        elif isinstance(op, ChmodOperation):
+            cmd = "chmod {mode:o} '{path}'"
+            cmd = cmd.format(path=op.path, mode=op.mode)
+            print(cmd)
+
+        elif isinstance(op, DeleteOperation):
+            cmd = "rm -rf -- '{path}'"
+            cmd = cmd.format(path=str(op.path))
+            print(cmd)
+
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(op)
 
 
 def walk(path, *args, **kwargs):
