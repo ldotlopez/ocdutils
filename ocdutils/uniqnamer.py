@@ -4,22 +4,10 @@ import sys
 import zlib
 
 from ocdutils import (
-    dt as ocddt,
-    filesystem as ocdfs
+    dtnamer,
+    filesystem,
+    ocdlib,
 )
-
-
-def crc32(p):
-    fh = p.open('rb')
-    value = 0
-    while True:
-        buff = fh.read(1024*1024*4)
-        if not buff:
-            break
-
-        value = zlib.crc32(buff, value)
-
-    return hex(value)[2:]
 
 
 class App:
@@ -44,11 +32,11 @@ class App:
         return parser
 
     def __init__(self, filesystem=None, logger=None):
-        self.exif = ocddt.ExifHandler()
-        self.mtime = ocddt.MtimeHandler()
-        self.name = ocddt.NameHandler()
+        self.exif = dtnamer.ExifHandler()
+        self.mtime = dtnamer.MtimeHandler()
+        self.name = dtnamer.NameHandler()
         self.logger = logger or logging.getLogger('uniqnamer')
-        self.filesystem = filesystem or ocdfs.FileSystem()
+        self.filesystem = filesystem or filesystem.FileSystem()
 
     def run_one(self, p):
         if not p.is_file():
@@ -70,37 +58,40 @@ class App:
         if suffix in ('.jpg',):
             try:
                 dt = self.exif.get(p)
-            except RequiredDataNotFoundError as e:
+            except dtnamer.RequiredDataNotFoundError as e:
                 pass
 
         if dt is None:
             dt = self.mtime.get(p)
 
         new_p = p.parent / (
-            dt.strftime(self.FMT) + ' ' + crc32(p) +
+            dt.strftime(self.FMT) + ' ' + ocdlib.crc32(p) +
             suffix)
 
         if new_p == p:
             return
 
-        op = ocdfs.RenameOperation(p, new_p)
+        op = filesystem.RenameOperation(p, new_p)
         try:
             self.filesystem.execute(op)
-        except ocdfs.OperationalError as e:
+        except filesystem.OperationalError as e:
             msg = "{path}: operational error"
             msg = msg.format(path=p, err=e)
             self.logger.error(msg)
             return
 
     def run(self, paths, recurse=False):
-        ocdfs.walk_and_run(*paths, fn=self.run_one, recurse=recurse)
+        def _run_one_wrap(p):
+            try:
+                self.run_one(p)
+            except ValueError as e:
+                errmsg = "Error with path '{path}': {cls} {e}"
+                errmsg = errmsg.format(
+                    path=p, cls=e.__class__, e=str(e))
+                print(errmsg, file=sys.stderr)
 
-
-def extract_subarguments(args, name):
-    prefix = name + '_'
-    for (k, v) in vars(args).items():
-        if k.startswith(prefix) and v is not None:
-            yield (k[len(prefix):], v)
+        # filesystem.walk_and_run(*paths, fn=_run_one_wrap, recurse=recurse)
+        filesystem.walk_and_run(*paths, fn=self.run_one, recurse=recurse)
 
 
 def main(argv=None):
@@ -112,7 +103,9 @@ def main(argv=None):
 
     args = parser.parse_args(sys.argv[1:])
 
-    fs = ocdfs.DryRunFilesystem() if args.dry_run else ocdfs.Filesystem()
+    fs = (filesystem.DryRunFilesystem()
+          if args.dry_run
+          else filesystem.Filesystem())
     logger = logging.getLogger('ocd-photos')
 
     app = App(filesystem=fs, logger=logger)
