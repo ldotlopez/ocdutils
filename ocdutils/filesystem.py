@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- encoding: utf-8 -*-
 
 # Copyright (C) 2018 Luis López <luis@cuarentaydos.com>
 #
