@@ -4,24 +4,20 @@ import os
 import pathlib
 import sys
 
-from ocdutils import filesystem
 
-# rename lowercase
-# rename with stamp
-# reduce jpgs
-
-
-# IFS="
-# "
-# for x in `find . \( -size +2M -a -iname '*.jpg' \)`
-# do
-#   tmp="${x/jpg/tmp.jpg}"
-#   convert -resize '1920x1920>' -quality 90 "$x" "$tmp" && mv "$tmp" "$x"
-# done
+from ocdutils import (
+    filesystem,
+    ocdlib
+)
 
 
-class UnknownFileTypeError(Exception):
-    pass
+# Some possible additions:
+# Reduce jpgs (useful por archive if not Hi-Res required)
+# ```
+# for x in listing():
+#   if filesize(x) > threashot or resolition(x) > (max_x, max_y):
+#     resize(x)
+# ```
 
 
 class App:
@@ -82,7 +78,7 @@ class App:
 
                 try:
                     op = extension.main(entry, container)
-                except UnknownFileTypeError as e:
+                except ocdlib.InvalidFileTypeError as e:
                     self.logger.error(e)
                     continue
 
@@ -100,8 +96,24 @@ class Extension:
 
         return x
 
-    def main(self, p, directories, files):
+    def main(self, entry, container):
         raise NotImplementedError()
+
+
+class DeOSXfy(Extension):
+    def main(self, entry, container):
+        entry = pathlib.Path(entry)
+
+        if entry.is_dir() and entry.name == '.DS_Store':
+            return filesystem.DeleteOperation(path=entry)
+
+        if entry.is_file() and entry.name.startswith('._'):
+            realentry = entry.parent / entry.name[2:]
+            if realentry.exists():
+                return filesystem.DeleteOperation(path=entry)
+
+        if entry.is_file() and entry.name == 'Icon\r':
+            return filesystem.DeleteOperation(path=entry)
 
 
 class FixExtension(Extension):
@@ -112,7 +124,7 @@ class FixExtension(Extension):
     }
 
     def main(self, entry, container):
-        entry = pathlib.Path(x)
+        entry = pathlib.Path(entry)
         if not entry.is_file():
             return
 
@@ -146,42 +158,31 @@ class FixPermissions(Extension):
             return filesystem.ChmodOperation(path=entry, mode=0o644)
 
         else:
-            raise UnknownFileTypeError(entry, 'unknow type')
-
-
-class DeOSXfy(Extension):
-    def main(self, entry, container):
-        entry = pathlib.Path(entry)
-
-        if entry.is_dir() and entry.name == '.DS_Store':
-            return filesystem.DeleteOperation(path=entry)
-
-        if entry.is_file() and entry.name.startswith('._'):
-            realentry = entry.parent / entry.name[2:]
-            if realentry.exists():
-                return filesystem.DeleteOperation(path=entry)
+            raise ocdlib.InvalidFileTypeError(entry, 'unknow type')
 
 
 class Mp3Deleter(Extension):
-    pass
-    # def main(self, entry, container):
-    #     for (dirname, directories, files) in os.walk(self.directory):
-    #         m = {dirname + '/' + x.lower(): dirname + '/' + x
-    #              for x in files}
+    def main(self, entry, container):
+        #     for (dirname, directories, files) in os.walk(self.directory):
+        #         m = {dirname + '/' + x.lower(): dirname + '/' + x
+        #              for x in files}
 
-    #         deletables = []
-    #         for (comparable, filename) in m.items():
-    #             check = comparable[:-5] + '.mp3'
-    #             if check in m:
-    #                 deletables.append(m[check])
+        #         deletables = []
+        #         for (comparable, filename) in m.items():
+        #             check = comparable[:-5] + '.mp3'
+        #             if check in m:
+        #                 deletables.append(m[check])
 
-    #         for filename in deletables:
-    #             print("rm -- '{f}'".format(f=filename.replace(r"'", r"\'")))
-    #             os.unlink(filename)
+        #         for filename in deletables:
+        #             print("rm -- '{f}'".format(f=filename.replace(r"'", r"\'")))
+        #             os.unlink(filename)
+        pass
 
 
 class SubtitleExtension(Extension):
-    pass
+    def main(self, entry, container):
+        # Integrate txtflar
+        pass
 
 
 def main(argv=None):
@@ -200,7 +201,11 @@ def main(argv=None):
 
     args = parser.parse_args(sys.argv[1:])
 
-    fs = filesystem.DryRunFilesystem() if args.dry_run else filesystem.Filesystem()
+    fs = (
+        filesystem.DryRunFilesystem()
+        if args.dry_run
+        else filesystem.Filesystem())
+
     logger = logging.getLogger('janitor')
 
     extensions = []
