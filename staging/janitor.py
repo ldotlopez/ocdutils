@@ -25,6 +25,9 @@ import pathlib
 import sys
 
 
+from PIL import Image
+
+
 from ocdutils import (
     filesystem,
     ocdlib
@@ -35,7 +38,7 @@ from ocdutils import (
 # Reduce jpgs (useful por archive if not Hi-Res required)
 # ```
 # for x in listing():
-#   if filesize(x) > threashot or resolition(x) > (max_x, max_y):
+#   if filesize(x) > threshold or resolution(x) > (max_x, max_y):
 #     resize(x)
 # ```
 
@@ -54,6 +57,10 @@ class App:
         ),
         parser.add_argument(
             '--ext',
+            action='store_true',
+        ),
+        parser.add_argument(
+            '--image-reduce',
             action='store_true',
         ),
         parser.add_argument(
@@ -97,7 +104,7 @@ class App:
                 entry = os.path.join(dirname, entry)
 
                 try:
-                    op = extension.main(entry, container)
+                    op = extension.process(entry, container)
                 except ocdlib.InvalidFileTypeError as e:
                     self.logger.error(e)
                     continue
@@ -116,12 +123,12 @@ class Extension:
 
         return x
 
-    def main(self, entry, container):
+    def process(self, entry, container):
         raise NotImplementedError()
 
 
 class DeOSXfy(Extension):
-    def main(self, entry, container):
+    def process(self, entry, container):
         entry = pathlib.Path(entry)
 
         if entry.is_dir() and entry.name == '.DS_Store':
@@ -143,7 +150,7 @@ class FixExtension(Extension):
         '.tif': '.tiff',
     }
 
-    def main(self, entry, container):
+    def process(self, entry, container):
         entry = pathlib.Path(entry)
         if not entry.is_file():
             return
@@ -162,7 +169,7 @@ class FixExtension(Extension):
 
 
 class FixPermissions(Extension):
-    def main(self, entry, container):
+    def process(self, entry, container):
         entry = pathlib.Path(entry)
         try:
             mode = oct(entry.stat().st_mode)[-3:]  # This is a bit hacky
@@ -181,8 +188,46 @@ class FixPermissions(Extension):
             raise ocdlib.InvalidFileTypeError(entry, 'unknow type')
 
 
+class ImageReduce(Extension):
+    THRESHOLD = 2160
+
+    def process(self, entry, container):
+        p = pathlib.Path(entry)
+        if not p.is_file():
+            return
+
+        try:
+            img = Image.open(entry)
+        except OSError:
+            return
+
+        (w, h) = img.size
+        max_dim = max(img.size)
+        ratio = w / h
+
+        if max_dim == w and w > self.THRESHOLD:
+            w = self.THRESHOLD
+            h = self.THRESHOLD / ratio
+
+        elif max_dim == h and h > self.THRESHOLD:
+            w = self.THRESHOLD * ratio
+            h = self.THRESHOLD
+
+        else:
+            return
+
+        return filesystem.CustomOperation(
+            self.resize,
+            entry,
+            w,
+            h)
+
+    def resize(self, entry, w, h):
+        pass
+
+
 class Mp3Deleter(Extension):
-    def main(self, entry, container):
+    def process(self, entry, container):
         #     for (dirname, directories, files) in os.walk(self.directory):
         #         m = {dirname + '/' + x.lower(): dirname + '/' + x
         #              for x in files}
@@ -200,7 +245,7 @@ class Mp3Deleter(Extension):
 
 
 class SubtitleExtension(Extension):
-    def main(self, entry, container):
+    def process(self, entry, container):
         # Integrate txtflar
         pass
 
@@ -209,6 +254,7 @@ def main(argv=None):
     exts = (
         ('deosxfy', DeOSXfy),
         ('ext', FixExtension),
+        ('image_reduce', ImageReduce),
         ('perms', FixPermissions),
         ('subtitles', SubtitleExtension)
     )
