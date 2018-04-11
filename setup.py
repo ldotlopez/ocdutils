@@ -25,8 +25,8 @@ setup(
     ],
     entry_points={
         'console_scripts':
-            ['ocd-dt-tool=ocdutils.dt:main',
-             'ocd-uniq-namer=ocdutils.uniqnaming:main',
+            ['ocd-dt-namer=ocdutils.dtnamer:main',
+             'ocd-uniq-namer=ocdutils.uniqnamer:main',
              'ocd-fslinter=ocdutils.ocdfslinter:main']
     }
 )
