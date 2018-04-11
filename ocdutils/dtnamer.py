@@ -62,13 +62,22 @@ class ExifHandler(BaseHandler):
                 t[key] = None
                 continue
 
+            delta = timedelta()
             try:
-                offset = int(exif['Exif'][offset_tag].decode('ascii'))
-            except KeyError:
-                offset = 0
+                offset = exif['Exif'][offset_tag].decode('ascii')
+                delta += timedelta(seconds=int(offset))
+            except (KeyError, ValueError):
+                pass
+
+            # Some cameras use hour '24' incorrectly.
+            # Quoting python bugtracker:
+            # > Indeed anything beyond 24:0:0 is invalid
+            if dt.find(' 24:'):
+                dt = dt.replace(' 24:', ' 00:')
+                delta += timedelta(days=1)
 
             dt = datetime.strptime(dt, '%Y:%m:%d %H:%M:%S')
-            dt = dt + timedelta(seconds=offset)
+            dt = dt + delta
 
             t[key] = dt
 
