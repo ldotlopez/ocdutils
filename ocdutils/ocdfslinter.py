@@ -1,4 +1,22 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- encoding: utf-8 -*-
+
+# Copyright (C) 2018 Luis López <luis@cuarentaydos.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 
 
 import argparse
@@ -7,7 +25,7 @@ import pathlib
 import sys
 
 
-from ocdutils import filesystem as ocdfs
+from ocdutils import filesystem
 
 
 class OCDFilesystemLinter:
@@ -18,7 +36,7 @@ class OCDFilesystemLinter:
     }
 
     def __init__(self, filesystem=None, logger=None):
-        self.filesystem = filesystem or ocdfs.Filesystem()
+        self.filesystem = filesystem or filesystem.Filesystem()
         self.logger = logger or logging.getLogger('ocd-fslinter')
 
     @classmethod
@@ -50,14 +68,14 @@ class OCDFilesystemLinter:
 
         newpath = path.parent / (path.stem + suffix)
         if newpath != path:
-            return ocdfs.RenameOperation(path, newpath)
+            return filesystem.RenameOperation(path, newpath)
 
     def deosify(self, path):
         if path.is_file() and path.name == '.DS_Store':
-            return ocdfs.DeleteOp(path)
+            return filesystem.DeleteOp(path)
 
         if path.is_file() and path.name.startswith('._'):
-            return ocdfs.DeleteOp(path)
+            return filesystem.DeleteOp(path)
 
     def subtitle_extension(self, path):
         if not (path.is_file() and path.suffix.lower() == '.srt'):
@@ -71,7 +89,7 @@ class OCDFilesystemLinter:
                 self.run_one(path)
 
             else:
-                for (dirpath, dirnames, filenames) in ocdfs.walk(path):
+                for (dirpath, dirnames, filenames) in filesystem.walk(path):
                     if skip_hidden:
                         self._strip_hidden(dirnames)
                         self._strip_hidden(filenames)
@@ -104,10 +122,9 @@ def main(argv=None):
 
     args = parser.parse_args(sys.argv[1:])
 
-    if args.dry_run:
-        fs = ocdfs.DryRunFilesystem()
-    else:
-        fs = ocdfs.Filesystem()
+    fs = (filesystem.DryRunFilesystem()
+          if args.dry_run
+          else filesystem.Filesystem())
 
     app = OCDFilesystemLinter(filesystem=fs)
     app.run(args.paths, recurse=args.recurse, skip_hidden=args.skip_hidden)
