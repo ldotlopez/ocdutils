@@ -27,6 +27,6 @@ setup(
         'console_scripts':
             ['ocd-dt-namer=ocdutils.dtnamer:main',
              'ocd-uniq-namer=ocdutils.uniqnamer:main',
-             'ocd-fslinter=ocdutils.ocdfslinter:main']
+             'ocd-fs-janitor=ocdutils.fsjanitor:main']
     }
 )
