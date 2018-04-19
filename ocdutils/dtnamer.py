@@ -23,6 +23,7 @@ import argparse
 import logging
 import os
 import re
+import sqlite3
 import sys
 from datetime import datetime, timedelta
 
@@ -265,6 +266,39 @@ class NameHandler(BaseHandler):
         new_p = p.parent / (name + p.suffix)
         if new_p != p:
             return ocdfs.RenameOperation(p, new_p)
+
+
+class ShotwellHandler(BaseHandler):
+    def __init__(self, format='%s', *args, default_datetime=datetime.now(),
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        db = sqlite3.connect(os.path.expanduser(
+            '~/.local/share/shotwell/data/photo.db'))
+        self.cursor = db.cursor()
+
+    def get(self, p):
+        full_path = str(p.absolute())
+
+        exposure_time = None
+        basequery = "SELECT exposure_time from {table} where filename = ?"
+
+        for table in ('PhotoTable', 'VideoTable'):
+            query = basequery.format(table=table)
+            row = self.cursor.execute(query, (full_path,)).fetchone()
+            if row is None:
+                continue
+
+            (exposure_time, ) = row
+            break
+
+        if exposure_time is None:
+            errmsg = "File not found in shotwell database"
+            raise RequiredDataNotFoundError(errmsg)
+
+        return datetime.fromtimestamp(exposure_time)
+
+    def set(self, p, dt):
+        raise NotImplementedError()
 
 
 class App:
