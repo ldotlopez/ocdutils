@@ -314,7 +314,7 @@ class App:
         parser.add_argument(
             '-f', '--from',
             dest='src',
-            choices=['exif', 'mtime', 'name'],
+            choices=['exif', 'mtime', 'name', 'shotwell'],
             required=True)
         parser.add_argument(
             '-s', '--set',

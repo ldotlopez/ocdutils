@@ -20,6 +20,7 @@
 
 
 import pathlib
+import zlib
 
 
 class InvalidFileTypeError(Exception):
@@ -48,4 +49,4 @@ def crc32(filepath, block_size=1024*1024*4):
 
             value = zlib.crc32(buff, value)
 
-        return hex(value)[2:]
+        return hex(value)[2:].zfill(8)
