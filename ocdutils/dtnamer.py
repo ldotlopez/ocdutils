@@ -91,7 +91,7 @@ class ExifHandler(BaseHandler):
             # Some cameras use hour '24' incorrectly.
             # Quoting python bugtracker:
             # > Indeed anything beyond 24:0:0 is invalid
-            if dt.find(' 24:'):
+            if dt.find(' 24:') > 0:
                 dt = dt.replace(' 24:', ' 00:')
                 delta += timedelta(days=1)
 
