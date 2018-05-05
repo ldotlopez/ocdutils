@@ -23,7 +23,9 @@ import argparse
 import logging
 import os
 import pathlib
+import shutil
 import sys
+import tempfile
 
 
 from PIL import Image
@@ -89,31 +91,40 @@ class App:
         self.filesystem = filesystem or filesystem.FileSystem()
         self.extensions = extensions
 
-    def run(self, paths, **kwargs):
+    def run(self, paths, recurse):
         for ext in self.extensions:
-            self._run_extension(ext, paths, **kwargs)
+            self._run_extension(ext, paths, recurse)
 
-    def _run_extension(self, extension, paths, **kwargs):
+    def _run_extension(self, extension, paths, recurse):
         for path in paths:
             self._run_extension_on_path(extension, path)
+            if not os.path.exists(path):
+                continue
 
-    def _run_extension_on_path(self, extension, path, **kwargs):
-        for (dirname, directories, files) in os.walk(str(path)):
-            for (entry, container) in (
-                    [(x, directories) for x in directories] +
-                    [(x, files) for x in files]):
-                entry = os.path.join(dirname, entry)
+            if not os.path.isdir(path):
+                continue
 
-                try:
-                    op = extension.process(entry, container)
-                except ocdlib.InvalidFileTypeError as e:
-                    self.logger.error(e)
-                    continue
+            if not recurse:
+                continue
 
-                if op is None or isinstance(op, filesystem.NoopOperation):
-                    continue
+            for (dirname, directories, files) in os.walk(str(path)):
+                for (entry, container) in (
+                        [(x, directories) for x in directories] +
+                        [(x, files) for x in files]):
+                    entry = os.path.join(dirname, entry)
+                    self._run_extension_on_path(extension, entry)
 
-                self.filesystem.execute(op)
+    def _run_extension_on_path(self, extension, path):
+        try:
+            op = extension.process(path)
+        except ocdlib.InvalidFileTypeError as e:
+            self.logger.error(e)
+            return
+
+        if op is None or isinstance(op, filesystem.NoopOperation):
+            return
+
+        self.filesystem.execute(op)
 
 
 class Extension:
@@ -124,12 +135,12 @@ class Extension:
 
         return x
 
-    def process(self, entry, container):
+    def process(self, entry):
         raise NotImplementedError()
 
 
 class DeOSXfy(Extension):
-    def process(self, entry, container):
+    def process(self, entry):
         entry = pathlib.Path(entry)
 
         if entry.is_dir() and entry.name == '.DS_Store':
@@ -151,7 +162,7 @@ class FixExtension(Extension):
         '.tif': '.tiff',
     }
 
-    def process(self, entry, container):
+    def process(self, entry):
         entry = pathlib.Path(entry)
         if not entry.is_file():
             return
@@ -170,7 +181,7 @@ class FixExtension(Extension):
 
 
 class FixPermissions(Extension):
-    def process(self, entry, container):
+    def process(self, entry):
         entry = pathlib.Path(entry)
         try:
             mode = oct(entry.stat().st_mode)[-3:]  # This is a bit hacky
@@ -192,7 +203,7 @@ class FixPermissions(Extension):
 class ImageReduce(Extension):
     THRESHOLD = 2160
 
-    def process(self, entry, container):
+    def process(self, entry):
         p = pathlib.Path(entry)
         if not p.is_file():
             return
@@ -208,10 +219,10 @@ class ImageReduce(Extension):
 
         if max_dim == w and w > self.THRESHOLD:
             w = self.THRESHOLD
-            h = self.THRESHOLD / ratio
+            h = round(self.THRESHOLD / ratio)
 
         elif max_dim == h and h > self.THRESHOLD:
-            w = self.THRESHOLD * ratio
+            w = round(self.THRESHOLD * ratio)
             h = self.THRESHOLD
 
         else:
@@ -220,15 +231,23 @@ class ImageReduce(Extension):
         return filesystem.CustomOperation(
             self.resize,
             entry,
+            img,
             w,
             h)
 
-    def resize(self, entry, w, h):
-        pass
+    def resize(self, entry, img, w, h):
+
+        fd, path = tempfile.mkstemp()
+        fh = os.fdopen(fd)
+        img.resize((w, h), resample=Image.BICUBIC)
+        img.save(fh, format=img.format)
+        fh.close()
+
+        shutil.move(path, entry)
 
 
 class Mp3Deleter(Extension):
-    def process(self, entry, container):
+    def process(self, entry):
         #     for (dirname, directories, files) in os.walk(self.directory):
         #         m = {dirname + '/' + x.lower(): dirname + '/' + x
         #              for x in files}
@@ -246,7 +265,7 @@ class Mp3Deleter(Extension):
 
 
 class SubtitleExtension(Extension):
-    def process(self, entry, container):
+    def process(self, entry):
         # Integrate txtflar
         pass
 
