@@ -82,6 +82,9 @@ class Filesystem(_BaseFilesystem):
             pass
 
         elif isinstance(op, RenameOperation):
+            if os.path.exists(op.dest):
+                raise OperationalError(op, "Destination exists")
+
             shutil.move(op.src, op.dest)
 
         elif isinstance(op, SetTimestampOperation):
