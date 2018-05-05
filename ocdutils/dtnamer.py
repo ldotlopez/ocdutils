@@ -241,7 +241,7 @@ class NameHandler(BaseHandler):
 
         gd = m.groupdict()
 
-        if 's' in gd:
+        if 's' in gd and len(gd) == 1:
             return datetime.fromtimestamp(int(gd.get('s')))
 
         dt_args = (
