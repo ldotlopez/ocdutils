@@ -295,6 +295,10 @@ class ShotwellHandler(BaseHandler):
             errmsg = "File not found in shotwell database"
             raise RequiredDataNotFoundError(errmsg)
 
+        if exposure_time is 0:
+            errmsg = "Timestamp is 0"
+            raise RequiredDataNotFoundError(errmsg)
+
         return datetime.fromtimestamp(exposure_time)
 
     def set(self, p, dt):
