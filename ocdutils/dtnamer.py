@@ -28,7 +28,6 @@ import sys
 from datetime import datetime, timedelta
 
 
-import PIL.Image
 import piexif
 from ocdutils import filesystem as ocdfs
 
@@ -117,42 +116,24 @@ class ExifHandler(BaseHandler):
     def write_exif_tag(self, p, dt):
         filepath = str(p)
 
-        try:
-            im = PIL.Image.open(filepath)
-        except OSError as e:
-            raise ocdfs.OperationalError() from e
+        data = piexif.load(filepath)
+        if 'Exif' not in data:
+            data['Exif'] = {}
 
-        try:
-            exif_dict = piexif.load(im.info["exif"])
+        dtbytes = datetime.strftime(dt, '%Y:%m:%d %H:%M:%S').encode('ascii')
 
-        except KeyError:  # Image has no exif data
-            exif_dict = {
-                'Exif': {},
-                'thumbnail': b''
-            }
-
-        exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = \
-            datetime.strftime(dt, '%Y:%m:%d %H:%M:%S').encode('ascii')
-        exif_dict["Exif"][piexif.ExifIFD.DateTimeDigitized] = \
-            datetime.strftime(dt, '%Y:%m:%d %H:%M:%S').encode('ascii')
+        data["Exif"][piexif.ExifIFD.DateTimeOriginal] = dtbytes
+        data["Exif"][piexif.ExifIFD.DateTimeDigitized] = dtbytes
         for tag in [
                 piexif.ExifIFD.OffsetTime,
                 piexif.ExifIFD.OffsetTimeOriginal,
                 piexif.ExifIFD.OffsetTimeDigitized]:
             try:
-                del(exif_dict['Exif'][tag])
+                del(data['Exif'][tag])
             except KeyError:
                 pass
 
-        # Rebuild thumbnail if not present or invalid
-        if 'thumbnail' in exif_dict or exif_dict['thumbnail'] == b'':
-            del(exif_dict['thumbnail'])
-
-        exif_bytes = piexif.dump(exif_dict)
-        try:
-            im.save(filepath, exif=exif_bytes)
-        except OSError as e:
-            raise InvalidFileTypeError() from e
+        piexif.insert(piexif.dump(data), filepath)
 
 
 class MtimeHandler(BaseHandler):
@@ -291,6 +272,7 @@ class ShotwellHandler(BaseHandler):
             (exposure_time, ) = row
             break
 
+        # exposure_time = 997182000
         if exposure_time is None:
             errmsg = "File not found in shotwell database"
             raise RequiredDataNotFoundError(errmsg)
