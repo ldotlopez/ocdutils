@@ -22,7 +22,9 @@
 import argparse
 import logging
 import os
+import random
 import re
+import subprocess
 import sqlite3
 import sys
 from datetime import datetime, timedelta
@@ -116,6 +118,12 @@ class ExifHandler(BaseHandler):
     def write_exif_tag(self, p, dt):
         filepath = str(p)
 
+        if filepath.lower().endswith('.jpg'):
+            self._write_jpeg_exif_tag(filepath, dt)
+        elif filepath.lower().endswith('.mp4'):
+            self._write_mp4_exif_tag(filepath, dt)
+
+    def _write_jpeg_exif_tag(self, filepath, dt):
         data = piexif.load(filepath)
         if 'Exif' not in data:
             data['Exif'] = {}
@@ -134,6 +142,48 @@ class ExifHandler(BaseHandler):
                 pass
 
         piexif.insert(piexif.dump(data), filepath)
+
+    def _write_mp4_exif_tag(self, filepath, dt):
+        def _random_sidefile():
+            chrs = (
+                [chr(x) for x in range(ord('a'), ord('z') + 1)] +
+                [chr(x) for x in range(ord('A'), ord('Z') + 1)] +
+                [chr(x) for x in range(ord('0'), ord('9') + 1)])
+
+            name, ext = os.path.splitext(filepath)
+            return '{name}-{rand}{ext}'.format(
+                name=name,
+                rand=''.join(random.choice(chrs) for _ in range(16)),
+                ext=ext)
+
+        # Seems that XMP tags are interpreted in UTC
+        xmp_dt = dt - dt.astimezone().utcoffset()
+        xmp_dt = datetime.strftime(xmp_dt, '%Y:%m:%d %H:%M:%S')
+
+        tf = _random_sidefile()
+        subprocess.run([
+            'ffmpeg',
+            '-loglevel', 'warning',
+            '-i', filepath,
+            '-vcodec', 'copy',
+            '-acodec', 'copy',
+            tf])
+        subprocess.run([
+            'exiftool',
+            '-quiet',
+            '-overwrite_original',
+            '-CreateDate=' + xmp_dt,
+            '-ModifyDate=' + xmp_dt,
+            '-MediaCreateDate=' + xmp_dt,
+            '-MediaModifyDate=' + xmp_dt,
+            '-TrackCreateDate=' + xmp_dt,
+            '-TrackModifyDate=' + xmp_dt,
+            tf])
+
+        os.rename(tf, filepath)
+
+        timestamp = dt.timestamp()
+        os.utime(filepath, (timestamp, timestamp))
 
 
 class MtimeHandler(BaseHandler):
