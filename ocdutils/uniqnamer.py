@@ -22,7 +22,6 @@
 import argparse
 import logging
 import sys
-import zlib
 
 
 from ocdutils import (

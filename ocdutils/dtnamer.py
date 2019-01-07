@@ -405,7 +405,7 @@ class App:
         try:
             self.filesystem.execute(op)
         except ocdfs.OperationalError as e:
-            msg = "{path}: operational error"
+            msg = "{path}: operational error: {err}"
             msg = msg.format(path=p, err=e)
             self.logger.error(msg)
             return
