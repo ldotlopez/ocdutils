@@ -27,6 +27,7 @@ import re
 import subprocess
 import sqlite3
 import sys
+import warnings
 from datetime import datetime, timedelta
 
 
@@ -62,6 +63,11 @@ class BaseHandler:
 
 
 class ExifHandler(BaseHandler):
+    def __init__(self, ignore_original_digitized_diff=False, *args,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ignore_original_digitized_diff = ignore_original_digitized_diff
+
     def get(self, p):
         t = {
             'original': (piexif.ExifIFD.DateTimeOriginal,
@@ -105,10 +111,15 @@ class ExifHandler(BaseHandler):
             msg = "exif tags not found"
             raise RequiredDataNotFoundError(msg)
 
-        if all(t.values()) and t['original'] != t['digitized']:
-            msg = "original:{original} != dititized{digitized}"
+        if (all(t.values())
+                and t['original'] != t['digitized']):
+            msg = "original:{original} != digitized:{digitized}"
             msg = msg.format(original=t['original'], digitized=t['digitized'])
-            raise ValueError(msg)
+
+            if self.ignore_original_digitized_diff:
+                warnings.warn("{}: {}".format(p, msg))
+            else:
+                raise ValueError(msg)
 
         return t['digitized'] or t['original']
 
@@ -363,6 +374,10 @@ class App:
         parser.add_argument(
             '--mtime-set-atime',
             action='store_false')
+        parser.add_argument(
+            '--exif-ignore-original-digitized-diff',
+            action='store_true',
+            default=False),
         parser.add_argument(
             '-r', '--recurse',
             action='store_true',
