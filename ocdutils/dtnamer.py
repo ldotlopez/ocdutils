@@ -31,6 +31,7 @@ import warnings
 from datetime import datetime, timedelta
 
 
+import dateutil.tz
 import piexif
 from ocdutils import filesystem as ocdfs
 
@@ -69,6 +70,15 @@ class ExifHandler(BaseHandler):
         self.ignore_original_digitized_diff = ignore_original_digitized_diff
 
     def get(self, p):
+        ext = p.suffix.lower()[1:]
+        if ext in ('mp4', 'avi', 'm4v', 'mov'):
+            return self._get_video(p)
+        elif ext in ('jpg', 'jpeg'):
+            return self._get_image(p)
+        else:
+            raise InvalidFileTypeError()
+
+    def _get_image(self, p):
         t = {
             'original': (piexif.ExifIFD.DateTimeOriginal,
                          piexif.ExifIFD.OffsetTimeOriginal),
@@ -122,6 +132,43 @@ class ExifHandler(BaseHandler):
                 raise ValueError(msg)
 
         return t['digitized'] or t['original']
+
+    def _get_video(self, p):
+        proc = subprocess.Popen(['/usr/bin/exiftool', p],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        out, _ = proc.communicate()
+        if proc.returncode != 0:
+            raise InvalidFileTypeError()
+
+        # Parse exiftool output into a dict
+        lines = [x.strip() for x in out.decode('utf-8').split('\n')]
+        lines = [x for x in lines if x]
+        exiftool_data = dict(
+            re.match(r'^(.+?)\s+: (.+)$', x).groups()
+            for x in lines
+        )
+
+        # Try to get date from some keys
+        datestr = None
+        for k in ('Media Modify Date', 'Media Create Date',
+                  'Modify Date', 'Create Date'):
+            try:
+                datestr = exiftool_data[k]
+                break
+            except KeyError:
+                pass
+
+        if not datestr:
+            msg = "exif tags not found"
+            raise RequiredDataNotFoundError(msg)
+
+        # Translate to localtime (tags are in UTC?)
+        from_zone = dateutil.tz.tzutc()
+        to_zone = dateutil.tz.tzlocal()
+        dt = datetime.strptime(datestr, '%Y:%m:%d %H:%M:%S')
+        dt = dt.replace(tzinfo=from_zone)
+        return dt.astimezone(to_zone)
 
     def set(self, p, dt):
         return ocdfs.CustomOperation(self.write_exif_tag, p, dt)
