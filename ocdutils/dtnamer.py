@@ -24,6 +24,7 @@ import logging
 import os
 import random
 import re
+import shutil
 import subprocess
 import sqlite3
 import sys
@@ -145,7 +146,7 @@ class ExifHandler(BaseHandler):
         lines = [x.strip() for x in out.decode('utf-8').split('\n')]
         lines = [x for x in lines if x]
         exiftool_data = dict(
-            re.match(r'^(.+?)\s+: (.+)$', x).groups()
+            re.match(r'^(.+?)\s*: (.+)$', x).groups()
             for x in lines
         )
 
@@ -178,11 +179,31 @@ class ExifHandler(BaseHandler):
 
         if filepath.lower().endswith('.jpg'):
             self._write_jpeg_exif_tag(filepath, dt)
-        elif filepath.lower().endswith('.mp4'):
+        elif (
+                filepath.lower().endswith('.mp4') or
+                filepath.lower().endswith('.mov')):
             self._write_mp4_exif_tag(filepath, dt)
+        else:
+            raise NotImplementedError(filepath)
+
+    @staticmethod
+    def _random_sidefile(filepath):
+        chrs = (
+            [chr(x) for x in range(ord('a'), ord('z') + 1)] +
+            [chr(x) for x in range(ord('A'), ord('Z') + 1)] +
+            [chr(x) for x in range(ord('0'), ord('9') + 1)])
+
+        name, ext = os.path.splitext(filepath)
+        return '{name}-{rand}{ext}'.format(
+            name=name,
+            rand=''.join(random.choice(chrs) for _ in range(16)),
+            ext=ext)
 
     def _write_jpeg_exif_tag(self, filepath, dt):
-        data = piexif.load(filepath)
+        tf = self._random_sidefile(filepath)
+        shutil.copy(filepath, tf)
+
+        data = piexif.load(tf)
         if 'Exif' not in data:
             data['Exif'] = {}
 
@@ -199,44 +220,44 @@ class ExifHandler(BaseHandler):
             except KeyError:
                 pass
 
-        piexif.insert(piexif.dump(data), filepath)
+        try:
+            piexif.insert(piexif.dump(data), tf)
+        except Exception:
+            raise
+
+        os.rename(tf, filepath)
 
     def _write_mp4_exif_tag(self, filepath, dt):
-        def _random_sidefile():
-            chrs = (
-                [chr(x) for x in range(ord('a'), ord('z') + 1)] +
-                [chr(x) for x in range(ord('A'), ord('Z') + 1)] +
-                [chr(x) for x in range(ord('0'), ord('9') + 1)])
-
-            name, ext = os.path.splitext(filepath)
-            return '{name}-{rand}{ext}'.format(
-                name=name,
-                rand=''.join(random.choice(chrs) for _ in range(16)),
-                ext=ext)
-
         # Seems that XMP tags are interpreted in UTC
         xmp_dt = dt - dt.astimezone().utcoffset()
         xmp_dt = datetime.strftime(xmp_dt, '%Y:%m:%d %H:%M:%S')
 
-        tf = _random_sidefile()
-        subprocess.run([
-            'ffmpeg',
-            '-loglevel', 'warning',
-            '-i', filepath,
-            '-vcodec', 'copy',
-            '-acodec', 'copy',
-            tf])
-        subprocess.run([
-            'exiftool',
-            '-quiet',
-            '-overwrite_original',
-            '-CreateDate=' + xmp_dt,
-            '-ModifyDate=' + xmp_dt,
-            '-MediaCreateDate=' + xmp_dt,
-            '-MediaModifyDate=' + xmp_dt,
-            '-TrackCreateDate=' + xmp_dt,
-            '-TrackModifyDate=' + xmp_dt,
-            tf])
+        tf = self._random_sidefile(filepath)
+        try:
+            subprocess.check_call([
+                'ffmpeg',
+                '-loglevel', 'warning',
+                '-i', filepath,
+                '-vcodec', 'copy',
+                '-acodec', 'copy',
+                tf])
+            subprocess.check_call([
+                'exiftool',
+                '-quiet',
+                '-overwrite_original',
+                '-CreateDate=' + xmp_dt,
+                '-ModifyDate=' + xmp_dt,
+                '-MediaCreateDate=' + xmp_dt,
+                '-MediaModifyDate=' + xmp_dt,
+                '-TrackCreateDate=' + xmp_dt,
+                '-TrackModifyDate=' + xmp_dt,
+                tf])
+        except subprocess.CalledProcessError:
+            warnmsg = "Unable to set date on {filepath}"
+            warnmsg = warnmsg.format(filepath=filepath)
+            warnings.warn(warnmsg)
+            os.unlink(tf)
+            return
 
         os.rename(tf, filepath)
 
