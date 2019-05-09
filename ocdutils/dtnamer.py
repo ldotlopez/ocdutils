@@ -176,12 +176,11 @@ class ExifHandler(BaseHandler):
 
     def write_exif_tag(self, p, dt):
         filepath = str(p)
+        ext = os.path.splitext(filepath)[1].lstrip('.').lower()
 
-        if filepath.lower().endswith('.jpg'):
+        if ext in ['jpg', 'jpeg']:
             self._write_jpeg_exif_tag(filepath, dt)
-        elif (
-                filepath.lower().endswith('.mp4') or
-                filepath.lower().endswith('.mov')):
+        elif ext in ['mp4', 'mov']:
             self._write_mp4_exif_tag(filepath, dt)
         else:
             raise NotImplementedError(filepath)
