@@ -193,8 +193,12 @@ class ExifHandler(BaseHandler):
             [chr(x) for x in range(ord('0'), ord('9') + 1)])
 
         name, ext = os.path.splitext(filepath)
-        return '{name}-{rand}{ext}'.format(
-            name=name,
+        dirname = os.path.dirname(name) or '.'
+        dirname = dirname.rstrip('/')
+        basename = os.path.basename(name)
+        return '{dirname}/.{basename}-{rand}{ext}'.format(
+            dirname=dirname,
+            basename=basename,
             rand=''.join(random.choice(chrs) for _ in range(16)),
             ext=ext)
 
