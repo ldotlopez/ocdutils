@@ -76,11 +76,10 @@ class App:
             pass
 
         # EXIF compatible files
-        if suffix in ('.jpg',):
-            try:
-                dt = self.exif.get(p)
-            except dtnamer.RequiredDataNotFoundError as e:
-                pass
+        try:
+            dt = self.exif.get(p)
+        except dtnamer.RequiredDataNotFoundError as e:
+            dt = None
 
         if dt is None:
             dt = self.mtime.get(p)

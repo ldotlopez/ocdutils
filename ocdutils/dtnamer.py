@@ -184,7 +184,7 @@ class ExifHandler(BaseHandler):
 
         if ext in ['jpg', 'jpeg']:
             self._write_jpeg_exif_tag(filepath, dt)
-        elif ext in ['mp4', 'mov']:
+        elif ext in ['mp4', 'm4v', 'mov']:
             self._write_mp4_exif_tag(filepath, dt)
         else:
             raise NotImplementedError(filepath)
