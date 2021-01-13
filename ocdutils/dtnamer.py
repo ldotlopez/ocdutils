@@ -113,9 +113,13 @@ class ExifHandler(BaseHandler):
                 dt = dt.replace(' 24:', ' 00:')
                 delta += timedelta(days=1)
 
-            dt = datetime.strptime(dt, '%Y:%m:%d %H:%M:%S')
-            dt = dt + delta
+            try:
+                dt = datetime.strptime(dt, '%Y:%m:%d %H:%M:%S')
+            except ValueError:
+                t[key] = None
+                continue
 
+            dt = dt + delta
             t[key] = dt
 
         if not any(t.values()):
@@ -259,7 +263,10 @@ class ExifHandler(BaseHandler):
             warnmsg = "Unable to set date on {filepath}"
             warnmsg = warnmsg.format(filepath=filepath)
             warnings.warn(warnmsg)
-            os.unlink(tf)
+            try:
+                os.unlink(tf)
+            except FileNotFoundError:
+                pass
             return
 
         os.rename(tf, filepath)
@@ -409,7 +416,7 @@ class ShotwellHandler(BaseHandler):
             errmsg = "File not found in shotwell database"
             raise RequiredDataNotFoundError(errmsg)
 
-        if exposure_time is 0:
+        if exposure_time == 0:
             errmsg = "Timestamp is 0"
             raise RequiredDataNotFoundError(errmsg)
 
