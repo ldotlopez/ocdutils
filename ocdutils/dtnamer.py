@@ -171,7 +171,10 @@ class ExifHandler(BaseHandler):
         # Translate to localtime (tags are in UTC?)
         from_zone = dateutil.tz.tzutc()
         to_zone = dateutil.tz.tzlocal()
-        dt = datetime.strptime(datestr, '%Y:%m:%d %H:%M:%S')
+        try:
+            dt = datetime.strptime(datestr, '%Y:%m:%d %H:%M:%S')
+        except ValueError:
+            raise RequiredDataNotFoundError(f"Invalid timestamp: {datestr}")
         dt = dt.replace(tzinfo=from_zone)
         return dt.astimezone(to_zone)
 

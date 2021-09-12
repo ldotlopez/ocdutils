@@ -43,6 +43,9 @@ class App:
     def build_parser(cls):
         parser = argparse.ArgumentParser()
         parser.add_argument(
+            '--only-exif',
+            action='store_true')
+        parser.add_argument(
             '-r', '--recurse',
             action='store_true',
             default=False)
@@ -59,7 +62,7 @@ class App:
         self.logger = logger or logging.getLogger('uniqnamer')
         self.filesystem = filesystem or filesystem.FileSystem()
 
-    def run_one(self, p):
+    def run_one(self, p, only_exif=False):
         if not p.is_file():
             return
 
@@ -79,7 +82,12 @@ class App:
         try:
             dt = self.exif.get(p)
         except dtnamer.RequiredDataNotFoundError as e:
-            dt = None
+            if only_exif:
+                self.logger.error(f"{p}: Missing exif data, skipping")
+                return
+            else:
+                self.logger.warning(f"{p}: Missing exif data, using timestamp")
+                dt = None
 
         if dt is None:
             dt = self.mtime.get(p)
@@ -100,18 +108,11 @@ class App:
             self.logger.error(msg)
             return
 
-    def run(self, paths, recurse=False):
-        def _run_one_wrap(p):
-            try:
-                self.run_one(p)
-            except ValueError as e:
-                errmsg = "Error with path '{path}': {cls} {e}"
-                errmsg = errmsg.format(
-                    path=p, cls=e.__class__, e=str(e))
-                print(errmsg, file=sys.stderr)
+    def run(self, paths, recurse=False, only_exif=False):
+        def _wrap(p):
+            return self.run_one(p, only_exif=only_exif)
 
-        # filesystem.walk_and_run(*paths, fn=_run_one_wrap, recurse=recurse)
-        filesystem.walk_and_run(*paths, fn=self.run_one, recurse=recurse)
+        filesystem.walk_and_run(*paths, fn=_wrap, recurse=recurse)
 
 
 def main(argv=None):
@@ -123,13 +124,15 @@ def main(argv=None):
 
     args = parser.parse_args(sys.argv[1:])
 
-    fs = (filesystem.DryRunFilesystem()
-          if args.dry_run
-          else filesystem.Filesystem())
+    if args.dry_run:
+        fs = filesystem.DryRunFilesystem()
+    else:
+        fs = filesystem.Filesystem()
+
     logger = logging.getLogger('ocd-photos')
 
     app = App(filesystem=fs, logger=logger)
-    app.run(args.paths, recurse=args.recurse)
+    app.run(args.paths, recurse=args.recurse, only_exif=args.only_exif)
 
 
 if __name__ == '__main__':
