@@ -19,7 +19,6 @@
 # USA.
 
 
-import pathlib
 import zlib
 
 
@@ -31,7 +30,7 @@ class RequiredDataNotFoundError(Exception):
     pass
 
 
-def crc32(filepath, block_size=1024*1024*4):
+def crc32(filepath, block_size=1024 * 1024 * 4):
     """
     Calculate crc32 for a path object.
     CRC32 is returned as a hexadecimal string
@@ -40,7 +39,7 @@ def crc32(filepath, block_size=1024*1024*4):
     if not isinstance(filepath, str):
         filepath = str(filepath)
 
-    with open(filepath, 'rb') as fh:
+    with open(filepath, "rb") as fh:
         value = 0
         while True:
             buff = fh.read(block_size)

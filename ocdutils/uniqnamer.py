@@ -23,35 +23,21 @@ import argparse
 import logging
 import sys
 
-
-from ocdutils import (
-    dtnamer,
-    filesystem,
-    ocdlib
-)
+from ocdutils import dtnamer, filesystem, ocdlib
 
 
 class App:
-    FMT = '%Y.%m.%d %H.%M.%S'
-    SUFFIX_MAP = {
-        '.jpeg': '.jpg',
-        '.mpeg': '.mpg',
-        '.tif': '.tiff'
-    }
+    FMT = "%Y.%m.%d %H.%M.%S"
+    SUFFIX_MAP = {".jpeg": ".jpg", ".mpeg": ".mpg", ".tif": ".tiff"}
 
     @classmethod
     def build_parser(cls):
         parser = argparse.ArgumentParser()
+        parser.add_argument("--only-exif", action="store_true")
         parser.add_argument(
-            '--only-exif',
-            action='store_true')
-        parser.add_argument(
-            '-r', '--recurse',
-            action='store_true',
-            default=False)
-        parser.add_argument(
-            dest='paths',
-            nargs='+')
+            "-r", "--recurse", action="store_true", default=False
+        )
+        parser.add_argument(dest="paths", nargs="+")
 
         return parser
 
@@ -59,14 +45,14 @@ class App:
         self.exif = dtnamer.ExifHandler()
         self.mtime = dtnamer.MtimeHandler()
         self.name = dtnamer.NameHandler()
-        self.logger = logger or logging.getLogger('uniqnamer')
+        self.logger = logger or logging.getLogger("uniqnamer")
         self.filesystem = filesystem or filesystem.FileSystem()
 
     def run_one(self, p, only_exif=False):
         if not p.is_file():
             return
 
-        if p.stem[0] == '.':
+        if p.stem[0] == ".":
             return
 
         dt = None
@@ -81,7 +67,7 @@ class App:
         # EXIF compatible files
         try:
             dt = self.exif.get(p)
-        except dtnamer.RequiredDataNotFoundError as e:
+        except dtnamer.RequiredDataNotFoundError:
             if only_exif:
                 self.logger.error(f"{p}: Missing exif data, skipping")
                 return
@@ -93,8 +79,8 @@ class App:
             dt = self.mtime.get(p)
 
         new_p = p.parent / (
-            dt.strftime(self.FMT) + ' ' + ocdlib.crc32(p) +
-            suffix)
+            dt.strftime(self.FMT) + " " + ocdlib.crc32(p) + suffix
+        )
 
         if new_p == p:
             return
@@ -117,10 +103,7 @@ class App:
 
 def main(argv=None):
     parser = App.build_parser()
-    parser.add_argument(
-        '-n', '--dry-run',
-        action='store_true',
-        default=False)
+    parser.add_argument("-n", "--dry-run", action="store_true", default=False)
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -129,11 +112,11 @@ def main(argv=None):
     else:
         fs = filesystem.Filesystem()
 
-    logger = logging.getLogger('ocd-photos')
+    logger = logging.getLogger("ocd-photos")
 
     app = App(filesystem=fs, logger=logger)
     app.run(args.paths, recurse=args.recurse, only_exif=args.only_exif)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

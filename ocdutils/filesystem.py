@@ -122,38 +122,34 @@ class DryRunFilesystem(_BaseFilesystem):
         elif isinstance(op, RenameOperation):
             cmd = "mv -b '{src}' '{dest}'"
             cmd = cmd.format(
-                src=self.escape(op.src),
-                dest=self.escape(op.dest))
+                src=self.escape(op.src), dest=self.escape(op.dest)
+            )
             print(cmd)
 
         elif isinstance(op, SetTimestampOperation):
-            cmd = ("touch {atime} {mtime} "
-                   "-t '{timestamp}' "
-                   "'{path}'")
+            cmd = "touch {atime} {mtime} " "-t '{timestamp}' " "'{path}'"
 
             cmd = cmd.format(
                 path=self.escape(op.path),
-                atime='-a' if op.set_atime else '',
-                mtime='-m' if op.set_atime else '',
+                atime="-a" if op.set_atime else "",
+                mtime="-m" if op.set_atime else "",
                 timestamp=datetime.fromtimestamp(int(op.timestamp)).strftime(
-                    '%Y%m%d%H%M.%S'))
+                    "%Y%m%d%H%M.%S"
+                ),
+            )
 
             print(cmd)
 
         elif isinstance(op, CustomOperation):
-            args = ', '.join([
-                repr(x)
-                for x in op.args])
-            kwargs = ', '.join([
-                "{}={}".format(k, repr(v))
-                for (k, v) in op.kwargs.items()])
+            args = ", ".join([repr(x) for x in op.args])
+            kwargs = ", ".join(
+                ["{}={}".format(k, repr(v)) for (k, v) in op.kwargs.items()]
+            )
 
             if kwargs:
-                args += ', ' + kwargs
+                args += ", " + kwargs
 
-            cmd = "{fnname}({args})".format(
-                fnname=op.fn.__name__,
-                args=args)
+            cmd = "{fnname}({args})".format(fnname=op.fn.__name__, args=args)
             print(cmd)
 
         elif isinstance(op, ChmodOperation):

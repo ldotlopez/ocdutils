@@ -27,15 +27,8 @@ import shutil
 import sys
 import tempfile
 
-
+from ocdutils import filesystem, ocdlib
 from PIL import Image
-
-
-from ocdutils import (
-    filesystem,
-    ocdlib
-)
-
 
 # Some possible additions:
 # Reduce jpgs (useful por archive if not Hi-Res required)
