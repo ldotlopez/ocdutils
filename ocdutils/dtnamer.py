@@ -221,7 +221,11 @@ class ExifHandler(BaseHandler):
         tf = self._random_sidefile(filepath)
         shutil.copy(filepath, tf)
 
-        data = piexif.load(tf)
+        try:
+            data = piexif.load(tf)
+        except piexif.InvalidImageDataError as e:
+            raise ocdfs.OperationalError(str(e)) from e
+
         if "Exif" not in data:
             data["Exif"] = {}
 
