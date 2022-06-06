@@ -34,9 +34,7 @@ class App:
     def build_parser(cls):
         parser = argparse.ArgumentParser()
         parser.add_argument("--only-exif", action="store_true")
-        parser.add_argument(
-            "-r", "--recurse", action="store_true", default=False
-        )
+        parser.add_argument("-r", "--recurse", action="store_true", default=False)
         parser.add_argument(dest="paths", nargs="+")
 
         return parser
@@ -78,9 +76,7 @@ class App:
         if dt is None:
             dt = self.mtime.get(p)
 
-        new_p = p.parent / (
-            dt.strftime(self.FMT) + " " + ocdlib.crc32(p) + suffix
-        )
+        new_p = p.parent / (dt.strftime(self.FMT) + " " + ocdlib.crc32(p) + suffix)
 
         if new_p == p:
             return

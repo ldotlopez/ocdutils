@@ -33,6 +33,7 @@ from datetime import datetime, timedelta
 
 import dateutil.tz
 import piexif
+
 from ocdutils import filesystem as ocdfs
 
 
@@ -152,9 +153,7 @@ class ExifHandler(BaseHandler):
         # Parse exiftool output into a dict
         lines = [x.strip() for x in out.decode("utf-8").split("\n")]
         lines = [x for x in lines if x]
-        exiftool_data = dict(
-            re.match(r"^(.+?)\s*: (.+)$", x).groups() for x in lines
-        )
+        exiftool_data = dict(re.match(r"^(.+?)\s*: (.+)$", x).groups() for x in lines)
 
         # Try to get date from some keys
         datestr = None
@@ -192,9 +191,14 @@ class ExifHandler(BaseHandler):
         ext = os.path.splitext(filepath)[1].lstrip(".").lower()
 
         if ext in ["jpg", "jpeg"]:
-            self._write_jpeg_exif_tag(filepath, dt)
+            try:
+                self._write_jpeg_exif_tag(filepath, dt)
+            except piexif.InvalidImageDataError as e:
+                warnings.warn("{}: {}".format(p, str(e)))
+
         elif ext in ["mp4", "m4v", "mov"]:
             self._write_mp4_exif_tag(filepath, dt)
+
         else:
             raise NotImplementedError(filepath)
 
@@ -243,11 +247,7 @@ class ExifHandler(BaseHandler):
             except KeyError:
                 pass
 
-        try:
-            piexif.insert(piexif.dump(data), tf)
-        except Exception:
-            raise
-
+        piexif.insert(piexif.dump(data), tf)
         os.rename(tf, filepath)
 
     def _write_mp4_exif_tag(self, filepath, dt):
@@ -318,9 +318,7 @@ class MtimeHandler(BaseHandler):
 
 
 class NameHandler(BaseHandler):
-    def __init__(
-        self, format="%s", *args, default_datetime=datetime.now(), **kwargs
-    ):
+    def __init__(self, format="%s", *args, default_datetime=datetime.now(), **kwargs):
         super().__init__(*args, **kwargs)
         self.default_dt = default_datetime
         self.format = format
@@ -348,9 +346,7 @@ class NameHandler(BaseHandler):
             "y": r"\d{4}",
         }
 
-        self._tbl = {
-            k: "(?P<{k}>{v})".format(k=k, v=v) for (k, v) in self._tbl.items()
-        }
+        self._tbl = {k: "(?P<{k}>{v})".format(k=k, v=v) for (k, v) in self._tbl.items()}
 
     def validate_format(self, format):
         i = 0
@@ -415,9 +411,7 @@ class NameHandler(BaseHandler):
 
 
 class ShotwellHandler(BaseHandler):
-    def __init__(
-        self, format="%s", *args, default_datetime=datetime.now(), **kwargs
-    ):
+    def __init__(self, format="%s", *args, default_datetime=datetime.now(), **kwargs):
         super().__init__(*args, **kwargs)
         db = sqlite3.connect(
             os.path.expanduser("~/.local/share/shotwell/data/photo.db")
@@ -485,9 +479,7 @@ class App:
             action="store_true",
             default=False,
         ),
-        parser.add_argument(
-            "-r", "--recurse", action="store_true", default=False
-        )
+        parser.add_argument("-r", "--recurse", action="store_true", default=False)
         parser.add_argument(dest="paths", nargs="+")
 
         return parser

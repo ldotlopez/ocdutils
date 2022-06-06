@@ -1,0 +1,14 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+python-dateutil = "==2.8.0"
+piexif = "==1.0.13"
+
+[dev-packages]
+types-python-dateutil = "*"
+
+[requires]
+python_version = "3"

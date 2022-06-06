@@ -121,9 +121,7 @@ class DryRunFilesystem(_BaseFilesystem):
 
         elif isinstance(op, RenameOperation):
             cmd = "mv -b '{src}' '{dest}'"
-            cmd = cmd.format(
-                src=self.escape(op.src), dest=self.escape(op.dest)
-            )
+            cmd = cmd.format(src=self.escape(op.src), dest=self.escape(op.dest))
             print(cmd)
 
         elif isinstance(op, SetTimestampOperation):

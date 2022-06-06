@@ -27,8 +27,9 @@ import shutil
 import sys
 import tempfile
 
-from ocdutils import filesystem, ocdlib
 from PIL import Image
+
+from ocdutils import filesystem, ocdlib
 
 # Some possible additions:
 # Reduce jpgs (useful por archive if not Hi-Res required)
@@ -43,44 +44,36 @@ class App:
     @classmethod
     def build_parser(cls):
         parser = argparse.ArgumentParser()
+        parser.add_argument("--all", action="store_true"),
         parser.add_argument(
-            '--all',
-            action='store_true'
+            "--deosxfy",
+            action="store_true",
         ),
         parser.add_argument(
-            '--deosxfy',
-            action='store_true',
+            "--ext",
+            action="store_true",
         ),
         parser.add_argument(
-            '--ext',
-            action='store_true',
+            "--image-reduce",
+            action="store_true",
         ),
         parser.add_argument(
-            '--image-reduce',
-            action='store_true',
+            "--perms",
+            action="store_true",
         ),
         parser.add_argument(
-            '--perms',
-            action='store_true',
+            "--subtitles",
+            action="store_true",
         ),
-        parser.add_argument(
-            '--subtitles',
-            action='store_true',
-        ),
-        parser.add_argument(
-            '-r', '--recurse',
-            action='store_true',
-            default=False)
-        parser.add_argument(
-            dest='paths',
-            nargs='+')
+        parser.add_argument("-r", "--recurse", action="store_true", default=False)
+        parser.add_argument(dest="paths", nargs="+")
 
         return parser
 
     def __init__(self, extensions=None, filesystem=None, logger=None):
         if not extensions:
             extensions = []
-        self.logger = logger or logging.getLogger('janitor')
+        self.logger = logger or logging.getLogger("janitor")
         self.filesystem = filesystem or filesystem.FileSystem()
         self.extensions = extensions
 
@@ -101,9 +94,9 @@ class App:
                 continue
 
             for (dirname, directories, files) in os.walk(str(path)):
-                for (entry, container) in (
-                        [(x, directories) for x in directories] +
-                        [(x, files) for x in files]):
+                for (entry, container) in [(x, directories) for x in directories] + [
+                    (x, files) for x in files
+                ]:
                     entry = os.path.join(dirname, entry)
                     self._run_extension_on_path(extension, entry)
 
@@ -136,23 +129,23 @@ class DeOSXfy(Extension):
     def process(self, entry):
         entry = pathlib.Path(entry)
 
-        if entry.is_dir() and entry.name == '.DS_Store':
+        if entry.is_dir() and entry.name == ".DS_Store":
             return filesystem.DeleteOperation(path=entry)
 
-        if entry.is_file() and entry.name.startswith('._'):
+        if entry.is_file() and entry.name.startswith("._"):
             realentry = entry.parent / entry.name[2:]
             if realentry.exists():
                 return filesystem.DeleteOperation(path=entry)
 
-        if entry.is_file() and entry.name == 'Icon\r':
+        if entry.is_file() and entry.name == "Icon\r":
             return filesystem.DeleteOperation(path=entry)
 
 
 class FixExtension(Extension):
     SUFFIX_MAP = {
-        '.jpeg': '.jpg',
-        '.mpeg': '.mpg',
-        '.tif': '.tiff',
+        ".jpeg": ".jpg",
+        ".mpeg": ".mpg",
+        ".tif": ".tiff",
     }
 
     def process(self, entry):
@@ -183,14 +176,14 @@ class FixPermissions(Extension):
                 return
             raise
 
-        if entry.is_dir() and mode != '755':
+        if entry.is_dir() and mode != "755":
             return filesystem.ChmodOperation(path=entry, mode=0o755)
 
-        elif entry.is_file() and mode != '644':
+        elif entry.is_file() and mode != "644":
             return filesystem.ChmodOperation(path=entry, mode=0o644)
 
         else:
-            raise ocdlib.InvalidFileTypeError(entry, 'unknow type')
+            raise ocdlib.InvalidFileTypeError(entry, "unknow type")
 
 
 class ImageReduce(Extension):
@@ -221,12 +214,7 @@ class ImageReduce(Extension):
         else:
             return
 
-        return filesystem.CustomOperation(
-            self.resize,
-            entry,
-            img,
-            w,
-            h)
+        return filesystem.CustomOperation(self.resize, entry, img, w, h)
 
     def resize(self, entry, img, w, h):
 
@@ -265,27 +253,21 @@ class SubtitleExtension(Extension):
 
 def main(argv=None):
     exts = (
-        ('deosxfy', DeOSXfy),
-        ('ext', FixExtension),
-        ('image_reduce', ImageReduce),
-        ('perms', FixPermissions),
-        ('subtitles', SubtitleExtension)
+        ("deosxfy", DeOSXfy),
+        ("ext", FixExtension),
+        ("image_reduce", ImageReduce),
+        ("perms", FixPermissions),
+        ("subtitles", SubtitleExtension),
     )
 
     parser = App.build_parser()
-    parser.add_argument(
-        '-n', '--dry-run',
-        action='store_true',
-        default=False)
+    parser.add_argument("-n", "--dry-run", action="store_true", default=False)
 
     args = parser.parse_args(sys.argv[1:])
 
-    fs = (
-        filesystem.DryRunFilesystem()
-        if args.dry_run
-        else filesystem.Filesystem())
+    fs = filesystem.DryRunFilesystem() if args.dry_run else filesystem.Filesystem()
 
-    logger = logging.getLogger('janitor')
+    logger = logging.getLogger("janitor")
 
     extensions = []
     for (opt, cls) in exts:
@@ -296,5 +278,5 @@ def main(argv=None):
     app.run(args.paths, recurse=args.recurse)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
