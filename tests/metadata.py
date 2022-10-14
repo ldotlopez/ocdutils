@@ -1,13 +1,10 @@
 import unittest
-from pathlib import Path
-from ocdutils.ng import (
-    # JpegHandler,
-    # VideoHandler,
-    # handler_for_file,
-    # MissingHandlerError,
-    _random_sidefile,
-)
 from fnmatch import fnmatch
+from pathlib import Path
+
+from ocdutils.ng import (
+    _random_sidefile,
+)  # JpegHandler,; VideoHandler,; handler_for_file,; MissingHandlerError,
 
 
 class NgTest(unittest.TestCase):
