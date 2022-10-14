@@ -41,6 +41,7 @@ setup(
     install_requires=["piexif", "pillow", "py-dateutil"],
     entry_points={
         "console_scripts": [
+            "ocd-remove-sidecar-videos=ocdutils.sidecars:main",
             "ocd-dt-namer=ocdutils.dtnamer:main",
             "ocd-uniq-namer=ocdutils.uniqnamer:main",
             "ocd-fs-janitor=ocdutils.fsjanitor:main",
