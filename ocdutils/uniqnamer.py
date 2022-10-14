@@ -33,7 +33,7 @@ class App:
     @classmethod
     def build_parser(cls):
         parser = argparse.ArgumentParser()
-        parser.add_argument("--only-exif", action="store_true")
+        parser.add_argument("--mtime-fallback", action="store_true")
         parser.add_argument("-r", "--recurse", action="store_true", default=False)
         parser.add_argument(dest="paths", nargs="+")
 
@@ -46,7 +46,7 @@ class App:
         self.logger = logger or logging.getLogger("uniqnamer")
         self.filesystem = filesystem or filesystem.FileSystem()
 
-    def run_one(self, p, only_exif=False):
+    def run_one(self, p, only_exif=True):
         if not p.is_file():
             return
 
@@ -90,7 +90,7 @@ class App:
             self.logger.error(msg)
             return
 
-    def run(self, paths, recurse=False, only_exif=False):
+    def run(self, paths, recurse=False, only_exif=True):
         def _wrap(p):
             return self.run_one(p, only_exif=only_exif)
 
@@ -111,7 +111,7 @@ def main(argv=None):
     logger = logging.getLogger("ocd-photos")
 
     app = App(filesystem=fs, logger=logger)
-    app.run(args.paths, recurse=args.recurse, only_exif=args.only_exif)
+    app.run(args.paths, recurse=args.recurse, only_exif=not args.mtime_fallback)
 
 
 if __name__ == "__main__":

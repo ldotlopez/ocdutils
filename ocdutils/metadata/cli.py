@@ -25,6 +25,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(dest="cmd")
+
     readcmd = subparsers.add_parser("read", help="read metadata")
     readcmd.add_argument("-r", "--reader", default="stat")
     readcmd.add_argument("filepath", type=Path)
