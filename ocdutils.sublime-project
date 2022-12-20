@@ -9,4 +9,7 @@
 			]
 		}
 	],
+	"settings": {
+	    "SublimeLinter.linters.flake8.disable": true,
+	}
 }

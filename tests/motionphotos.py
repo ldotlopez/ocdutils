@@ -22,7 +22,7 @@
 import hashlib
 import unittest
 
-from ocdutils.motionphotos import MotionPhoto
+from ocdutils.motionphotos import MotionPhotoBytes
 from pathlib import Path
 
 DIRPATH = Path(__file__).parent / "assets"
@@ -40,13 +40,13 @@ def md5(buff: bytes) -> str:
 
 class MotionPhotoTest(unittest.TestCase):
     def test_load_simple(self):
-        mp = MotionPhoto.fromfile(IMAGE_FILEPATH)
+        mp = MotionPhotoBytes.fromfile(IMAGE_FILEPATH)
         self.assertFalse(mp.has_video)
         self.assertEqual(md5(mp.image), IMAGE_CHECKSUM)
         self.assertEqual(mp.video, None)
 
     def test_load_composed(self):
-        mp = MotionPhoto.fromfile(COMPOSED_FILEPATH)
+        mp = MotionPhotoBytes.fromfile(COMPOSED_FILEPATH)
 
         self.assertTrue(mp.has_video)
 
@@ -54,7 +54,7 @@ class MotionPhotoTest(unittest.TestCase):
         self.assertEqual(md5(mp.video), VIDEO_CHECKSUM)
 
     def test_insert_video(self):
-        mp = MotionPhoto.fromfile(IMAGE_FILEPATH)
+        mp = MotionPhotoBytes.fromfile(IMAGE_FILEPATH)
         self.assertEqual(md5(mp.image), IMAGE_CHECKSUM)
         with open(VIDEO_FILEPATH, "rb") as fh:
             mp.insert_video(fh.read())
@@ -64,7 +64,7 @@ class MotionPhotoTest(unittest.TestCase):
         self.assertEqual(md5(mp.data), COMPOSED_CHECKSUM)
 
     def test_drop_video(self):
-        mp = MotionPhoto.fromfile(COMPOSED_FILEPATH)
+        mp = MotionPhotoBytes.fromfile(COMPOSED_FILEPATH)
         mp.drop_video()
 
         self.assertEqual(md5(mp.image), IMAGE_CHECKSUM)

@@ -26,41 +26,52 @@ from typing import Optional, Type
 _MARKER = b"MotionPhoto_Data"
 
 
-class MotionPhoto:
+class MotionPhotoBytes:
     @classmethod
-    def fromfile(cls, filepath: str, *args, **kwargs) -> MotionPhoto:
+    def fromfile(cls, filepath: str, *args, **kwargs) -> MotionPhotoBytes:
         with open(filepath, "rb") as fh:
             return cls(fh.read(), *args, **kwargs)
 
     def __init__(self, buff: bytes, marker: bytes = _MARKER):
-        self.data = memoryview(buff)
         self.marker = marker
-        self.idx = buff.find(self.marker)
+        idx = buff.find(self.marker)
 
-    @property
-    def image(self) -> bytes:
-        if self.has_video:
-            return bytes(self.data[0 : self.idx])
+        self.image: memoryview
+        self.video: Optional[memoryview]
+
+        if idx >= 0:
+            self.image = memoryview(buff[0:idx])
+            self.video = memoryview(buff[idx + len(self.marker) :])
         else:
-            return bytes(self.data)
-
-    @property
-    def video(self) -> Optional[bytes]:
-        if not self.has_video:
-            return None
-
-        return bytes(self.data[self.idx + len(self.marker) :])
+            self.image = memoryview(buff[:])
+            self.video = None
 
     @property
     def has_video(self) -> bool:
-        return self.idx >= 0
+        return self.video is not None
 
     def insert_video(self, buff: bytes) -> None:
-        # Update index before add
-        self.idx = len(self.image)
-        self.data = memoryview(bytes(self.image) + self.marker + buff)
+        self.video = memoryview(buff)
 
     def drop_video(self) -> None:
-        self.data = memoryview(bytes(self.image))
-        # Update index after drop
-        self.idx = -1
+        self.video = None
+
+    @property
+    def data(self) -> bytes:
+        if self.has_video:
+            return bytes(self.image) + self.marker + bytes(self.video)  # type: ignore[arg-type]
+        else:
+            return bytes(self.image)
+
+
+class MotionPhoto(MotionPhotoBytes):
+    def __init__(self, filepath: str):
+        super().fromfile(filepath)
+
+    def insert_video(self, filepath: str):  # type: ignore[override]
+        with open(filepath, "rb") as fh:
+            super().insert_video(fh.read())
+
+    def save(self, dest: str):
+        with open(dest, "wb") as fh:
+            fh.write(self.data)
