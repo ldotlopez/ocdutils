@@ -19,11 +19,9 @@
 # USA.
 
 
-from setuptools import setup
-
-
 import datetime
 
+from setuptools import setup
 
 setup(
     name="ocdutils",
@@ -38,13 +36,19 @@ setup(
         'Utils for control your "Obsessive-Compulsive Disorder" with your data'
     ),
     long_description=open("README.md").read(),
-    install_requires=["piexif", "pillow", "py-dateutil"],
+    install_requires=[
+        "imagehash",
+        "piexif",
+        "pillow",
+        "py-dateutil",
+    ],
     entry_points={
         "console_scripts": [
-            "ocd-remove-sidecar-videos=ocdutils.sidecars:main",
             "ocd-dt-namer=ocdutils.dtnamer:main",
-            "ocd-uniq-namer=ocdutils.uniqnamer:main",
             "ocd-fs-janitor=ocdutils.fsjanitor:main",
+            "ocd-remove-sidecar-videos=ocdutils.sidecars:main",
+            "ocd-similar-images=ocdutils.similarimages:main",
+            "ocd-uniq-namer=ocdutils.uniqnamer:main",
         ]
     },
 )
