@@ -25,7 +25,7 @@ from setuptools import setup
 
 setup(
     name="ocdutils",
-    version="1.0.0-alpha" + datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
+    version="1.0.0rc1." + datetime.datetime.now().strftime("%Y.%m.%d.%H.%M.%S"),
     author="Luis López",
     author_email="luis@cuarentaydos.com",
     packages=["ocdutils"],
@@ -47,6 +47,7 @@ setup(
             "ocd-dt-namer=ocdutils.dtnamer:main",
             "ocd-fs-janitor=ocdutils.fsjanitor:main",
             "ocd-remove-sidecar-videos=ocdutils.sidecars:main",
+            "ocd-motionphotos=ocdutils.motionphotos:main",
             "ocd-similar-images=ocdutils.similarimages:main",
             "ocd-uniq-namer=ocdutils.uniqnamer:main",
         ]

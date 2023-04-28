@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Type
+from typing import Optional
 
 _MARKER = b"MotionPhoto_Data"
 
@@ -66,7 +66,8 @@ class MotionPhotoBytes:
 
 class MotionPhoto(MotionPhotoBytes):
     def __init__(self, filepath: str):
-        super().fromfile(filepath)
+        with open(filepath, "rb") as fh:
+            return super().__init__(fh.read())
 
     def insert_video(self, filepath: str):  # type: ignore[override]
         with open(filepath, "rb") as fh:
@@ -75,3 +76,48 @@ class MotionPhoto(MotionPhotoBytes):
     def save(self, dest: str):
         with open(dest, "wb") as fh:
             fh.write(self.data)
+
+
+def main():
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser()
+    command = parser.add_subparsers(dest="command")
+
+    test = command.add_parser("test")
+    test.add_argument("--mp", dest="motionphoto", required=True)
+
+    join = command.add_parser("join")
+    join.add_argument("-i", dest="image", required=True)
+    join.add_argument("-v", dest="video", required=True)
+    join.add_argument("--mp", dest="motionphoto", required=True)
+
+    split = command.add_parser("split")
+    split.add_argument("-i", dest="image", required=True)
+    split.add_argument("-v", dest="video", required=True)
+    split.add_argument("--mp", dest="motionphoto", required=True)
+
+    args = parser.parse_args()
+
+    if args.command == "test":
+        mp = MotionPhoto(args.motionphoto)
+        sys.exit(0 if mp.has_video else 1)
+
+    elif args.command == "join":
+        mp = MotionPhoto(args.image)
+        mp.insert_video(args.video)
+        mp.save(args.motionphoto)
+
+    elif args.command == "split":
+        mp = MotionPhoto(args.motionphoto)
+
+        with open(args.image, "wb") as fh:
+            fh.write(mp.image)
+
+        with open(args.video, "wb") as fh:
+            fh.write(mp.video)
+
+
+if __name__ == "__main__":
+    main()
