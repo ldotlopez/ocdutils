@@ -60,6 +60,10 @@ def find_duplicates(
     hash_size: int | None = _DEFAULT_HASH_SIZE,
     update_fn: UpdateFn | None = None,
 ):
+    def _g(it):
+        return it
+        return [x for x in it]
+
     def map_and_update(item):
         ret = imagehash_frompath(item, hash_size=hash_size)
         if update_fn:
@@ -71,18 +75,17 @@ def find_duplicates(
         hashes = executor.map(map_and_update, images)
 
     # Zip
-    zip_g = zip(hashes, images)
+    zip_g = _g(zip(hashes, images))
 
     # Sort by hash
-    sorted_g = sorted(zip_g, key=lambda x: x[0])
+    sorted_g = _g(sorted(zip_g, key=lambda x: x[0]))
 
-    # Group by hash
-    grouped_g = itertools.groupby(sorted_g, key=lambda x: x[0])
-
-    # Unroll groups and strip imghash from them
-    unrolled_g = ((imghash, [img for _, img in gr]) for imghash, gr in grouped_g)
-
+    # group by hash and strip imghashes
+    grouped_g = _g(
+        (imghash, [img for _, img in gr])
+        for imghash, gr in itertools.groupby(sorted_g, lambda x: x[0])
+    )
     # Strip unique items
-    groups_g = ((imghash, gr) for imghash, gr in unrolled_g if len(gr) > 2)
+    groups_g = _g(((imghash, gr) for imghash, gr in grouped_g if len(gr) > 1))
 
     return list(groups_g)
