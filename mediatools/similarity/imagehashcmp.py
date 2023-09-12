@@ -50,9 +50,12 @@ def find_duplicates_cmd(targets: list[Path], hash_size: int):
         )
 
     for idx, (imghash, gr) in enumerate(dupes):
-        click.echo(f"Group {idx+1}  ({imghash})")
-        for img in gr:
-            click.echo(f"  '{click.format_filename(img)}'")
+        pathsstr = " ".join(
+            ["'" + img.as_posix().replace("'", "'") + "'" for img in gr]
+        )
+        click.echo(f"Group {idx+1}  ({imghash}): {pathsstr}")
+        # for img in gr:
+        #     click.echo(f"  '{click.format_filename(img)}'")
 
 
 def find_duplicates(

@@ -46,8 +46,12 @@ def iter_files(*targets: Path):
 
 
 def file_matches_mime(filepath: Path, mime_glob: str) -> bool:
-    mime = magic.from_file(filepath.as_posix(), mime=True)
+    mime = file_mime(filepath)
     return fnmatch(mime, mime_glob)
+
+
+def file_mime(filepath: Path) -> str:
+    return magic.from_file(filepath.as_posix(), mime=True)
 
 
 def _random_string(len: int = 6) -> str:
@@ -77,8 +81,12 @@ def change_file_extension(file: Path, extension: str) -> Path:
 
 
 def clone_stat(src: Path, dst: Path) -> None:
-    shutil.copymode(src, dst)
-    shutil.copystat(src, dst)
+    if not _DRY_RUN:
+        shutil.copymode(src, dst)
+        shutil.copystat(src, dst)
+    else:
+        print(f"touch --reference='{src}' '{dst}'")
+        print(f"chmod --reference='{src}' '{dst}'")
 
 
 def clone_exif(src: Path, dst: Path) -> None:
