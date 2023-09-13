@@ -9,6 +9,7 @@ import click
 import imagehash
 
 from ..lib import filesystem as fs
+from ..lib import spawn
 
 UpdateFn = Callable[[Path, str], None]
 
@@ -30,6 +31,7 @@ def imagehash_frombytes(data: bytes, *, hash_size=_DEFAULT_HASH_SIZE) -> str:
 
 
 @click.command("find-duplicates")
+@click.option("--execute", "-x", type=str)
 @click.option(
     "--hash-size",
     type=int,
@@ -37,7 +39,9 @@ def imagehash_frombytes(data: bytes, *, hash_size=_DEFAULT_HASH_SIZE) -> str:
     help="powers of 2, lower values more false positives",
 )
 @click.argument("targets", nargs=-1, required=True, type=Path)
-def find_duplicates_cmd(targets: list[Path], hash_size: int):
+def find_duplicates_cmd(
+    targets: list[Path], hash_size: int, execute: str | None = None
+):
     click.echo(f"Reading contents of {len(targets)} targets...")
     images = [x for x in fs.iter_files(*targets) if fs.file_matches_mime(x, "image/*")]
     click.echo(f"Found {len(images)} images")
@@ -54,8 +58,10 @@ def find_duplicates_cmd(targets: list[Path], hash_size: int):
             ["'" + img.as_posix().replace("'", "'") + "'" for img in gr]
         )
         click.echo(f"Group {idx+1}  ({imghash}): {pathsstr}")
-        # for img in gr:
-        #     click.echo(f"  '{click.format_filename(img)}'")
+
+        if execute:
+            cmdl = [execute] + [x.as_posix() for x in gr]
+            spawn.run(*cmdl)
 
 
 def find_duplicates(
