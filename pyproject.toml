@@ -24,3 +24,7 @@ packages = ["mediatools", "mediatools.lib", "mediatools.similarity"]
 
 [project.scripts]
 mediatools = "mediatools.cli:main"
+mt-duplicates = "mediatools.similarity.imagehashcmp:main"
+mt-formats = "mediatools.formats:main"
+mt-motionphotos = "mediatools.motionphotos:main"
+mt-sidecars = "mediatools.sidecars:main"

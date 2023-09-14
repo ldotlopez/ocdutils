@@ -133,5 +133,8 @@ def jpgize_cmd(
 formats_cmd.add_command(mp4ize_cmd)
 formats_cmd.add_command(jpgize_cmd)
 
-if __name__ == "__main__":
-    formats_cmd()
+
+def main():
+    import sys
+
+    sys.exit(formats_cmd())

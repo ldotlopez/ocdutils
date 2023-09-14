@@ -66,5 +66,7 @@ def fix_extensions_cmd(targets, *, recursive: bool = False, verbose: bool = Fals
             click.echo(f"{click.format_filename(path)} → {click.format_filename(dst)}")
 
 
-if __name__ == "__main__":
-    fix_extensions()
+def main():
+    import sys
+
+    sys.exit(fix_extensions_cmd())
