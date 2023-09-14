@@ -7,15 +7,24 @@ from pathlib import Path
 
 import click
 import imagehash
+import PIL
 
 from ..lib import filesystem as fs
 from ..lib import spawn
 
-UpdateFn = Callable[[Path, str], None]
-
-
 _LOGGER = logging.getLogger(__name__)
 _DEFAULT_HASH_SIZE = 16
+
+
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+except ImportError:
+    _LOGGER.warning("HEIF support not enabled, install pillow-heif")
+
+
+UpdateFn = Callable[[Path, str | None], None]
 
 
 def imagehash_frompath(path: Path, *, hash_size=_DEFAULT_HASH_SIZE) -> str:
@@ -69,12 +78,19 @@ def find_duplicates(
     hash_size: int | None = _DEFAULT_HASH_SIZE,
     update_fn: UpdateFn | None = None,
 ):
+    hash_size = hash_size or _DEFAULT_HASH_SIZE
+
     def _g(it):
         return it
-        return [x for x in it]
+        # return [x for x in it]
 
     def map_and_update(item):
-        ret = imagehash_frompath(item, hash_size=hash_size)
+        try:
+            ret = imagehash_frompath(item, hash_size=hash_size)
+        except PIL.UnidentifiedImageError:
+            _LOGGER.warning(f"{item}: unidentified image")
+            ret = None
+
         if update_fn:
             update_fn(item, ret)
 
@@ -83,8 +99,12 @@ def find_duplicates(
     with futures.ThreadPoolExecutor() as executor:
         hashes = executor.map(map_and_update, images)
 
-    # Zip
-    zip_g = _g(zip(hashes, images))
+    # zip without None's
+    zip_g = _g(
+        (imghash, image)
+        for (imghash, image) in zip(hashes, images)
+        if imghash is not None
+    )
 
     # Sort by hash
     sorted_g = _g(sorted(zip_g, key=lambda x: x[0]))
