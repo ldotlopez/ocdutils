@@ -17,5 +17,5 @@ class StatMetadata:
 
 @dataclass
 class Metadata:
-    exif: Optional[ExifMetadata] = None
-    stat: Optional[StatMetadata] = None
+    exif: ExifMetadata | None = None
+    stat: StatMetadata | None = None

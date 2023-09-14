@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[bdist_wheel]
+universal = 1
+
+[project]
+name = "mediatools"
+version = "0.0.0"
+dependencies = [
+    "click",
+    "imagehash",
+    "mimetypes-magic",
+    # "opencv-python",
+    "piexif",
+    "pillow-heif",
+    "python-dateutil",
+    "importlib-metadata; python_version >= '3.11'",
+]
+
+[tool.setuptools]
+packages = ["mediatools", "mediatools.lib", "mediatools.similarity"]
+
+[project.scripts]
+mediatools = "mediatools.cli:main"

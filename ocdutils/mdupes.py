@@ -7,8 +7,9 @@ import json
 import logging
 import os.path
 import sys
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
-from typing import Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple
 
 import cv2
 import imagehash
@@ -20,7 +21,7 @@ _LOGGER.setLevel(logging.DEBUG)
 
 _DEFAULT_HASH_SIZE = 16
 
-PathOrStr = Union[Path, str]
+PathOrStr = Path | str
 
 
 def as_posix_path(path: PathOrStr) -> str:
@@ -35,7 +36,7 @@ def as_posix_path(path: PathOrStr) -> str:
 
 
 def walk_files(
-    targets, filter_fn: Optional[Callable[[Path], bool]] = None
+    targets, filter_fn: Callable[[Path], bool] | None = None
 ) -> Iterator[Path]:
     for target in targets:
         target = Path(target)
@@ -63,8 +64,8 @@ def calculate_hash(path: PathOrStr, hash_size: int = _DEFAULT_HASH_SIZE):
 
 def group_paths_by_hash(
     files: Iterator[Path], *, hash_size: int = _DEFAULT_HASH_SIZE
-) -> List[List[Path]]:
-    groups: Dict[str, List[Path]] = {}
+) -> list[list[Path]]:
+    groups: dict[str, list[Path]] = {}
 
     for file in files:
         mime = magic.from_file(as_posix_path(file), mime=True)
@@ -80,7 +81,7 @@ def group_paths_by_hash(
     return list(groups.values())
 
 
-def similarity_matrix(medias: List[Path]) -> List[Tuple[Path, Path, float]]:
+def similarity_matrix(medias: list[Path]) -> list[tuple[Path, Path, float]]:
     def _normalized_histogram(pathstr):
         img = cv2.imread(pathstr)
 

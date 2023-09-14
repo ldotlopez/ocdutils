@@ -5,8 +5,9 @@ import itertools
 import json
 import logging
 import os.path
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
 import imagehash
 
@@ -21,7 +22,7 @@ def calculate_hash(filepath: Path, *, hash_size=_DEFAULT_HASH_SIZE) -> str:
 
 def build_hash_dict(
     collection: Iterable[Path], *, hash_size=_DEFAULT_HASH_SIZE
-) -> Dict[str, List[Path]]:
+) -> dict[str, list[Path]]:
     hashes = {}
     for imgpath in collection:
         ih = calculate_hash(imgpath, hash_size=hash_size)
@@ -40,7 +41,7 @@ def walk(targets):
             yield target
 
         else:
-            for (dirpath, dirnames, filenames) in os.walk(target):
+            for dirpath, dirnames, filenames in os.walk(target):
                 dirpath = Path(dirpath)
                 yield from (dirpath / x for x in filenames)
 
@@ -58,14 +59,14 @@ class JSONEncoder(json.JSONEncoder):
 @dataclasses.dataclass
 class SimilarImagesGroup:
     hash: str
-    paths: List[Path]
+    paths: list[Path]
 
 
 class SimilarImages:
     def __init__(self, hash_size: int = _DEFAULT_HASH_SIZE):
         self.hash_size = hash_size
 
-    def search_similar(self, collection: List[Path | str]) -> List[SimilarImagesGroup]:
+    def search_similar(self, collection: list[Path | str]) -> list[SimilarImagesGroup]:
         collection_paths = (Path(x) for x in collection)
         images = (
             x for x in collection_paths if x.suffix.lower()[1:] in ["jpg", "jpeg"]
@@ -92,10 +93,10 @@ class SimilarImages:
             if len(imgs) > 1
         ]
 
-    def run_for_machines(self, collection: List[Path | str]) -> str:
+    def run_for_machines(self, collection: list[Path | str]) -> str:
         return JSONEncoder(indent=4).encode(self.search_similar(collection))
 
-    def run_for_humans(self, collection: List[Path | str]):
+    def run_for_humans(self, collection: list[Path | str]):
         res = self.search_similar(collection)
         for gr in res:
             print(f"[*] Found {len(gr.paths)} similar images with hash {gr.hash}")

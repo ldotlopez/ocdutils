@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- encoding: utf-8 -*-
 
 # Copyright (C) 2018 Luis López <luis@cuarentaydos.com>
 #
@@ -93,8 +92,8 @@ class App:
             if not recurse:
                 continue
 
-            for (dirname, directories, files) in os.walk(str(path)):
-                for (entry, container) in [(x, directories) for x in directories] + [
+            for dirname, directories, files in os.walk(str(path)):
+                for entry, container in [(x, directories) for x in directories] + [
                     (x, files) for x in files
                 ]:
                     entry = os.path.join(dirname, entry)
@@ -217,7 +216,6 @@ class ImageReduce(Extension):
         return filesystem.CustomOperation(self.resize, entry, img, w, h)
 
     def resize(self, entry, img, w, h):
-
         fd, path = tempfile.mkstemp()
         fh = os.fdopen(fd)
         img.resize((w, h), resample=Image.BICUBIC)
@@ -270,7 +268,7 @@ def main(argv=None):
     logger = logging.getLogger("janitor")
 
     extensions = []
-    for (opt, cls) in exts:
+    for opt, cls in exts:
         if getattr(args, opt) or args.all:
             extensions.append(cls())
 

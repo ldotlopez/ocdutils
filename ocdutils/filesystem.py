@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- encoding: utf-8 -*-
 
 # Copyright (C) 2018 Luis López <luis@cuarentaydos.com>
 #
@@ -140,14 +139,12 @@ class DryRunFilesystem(_BaseFilesystem):
 
         elif isinstance(op, CustomOperation):
             args = ", ".join([repr(x) for x in op.args])
-            kwargs = ", ".join(
-                ["{}={}".format(k, repr(v)) for (k, v) in op.kwargs.items()]
-            )
+            kwargs = ", ".join([f"{k}={repr(v)}" for (k, v) in op.kwargs.items()])
 
             if kwargs:
                 args += ", " + kwargs
 
-            cmd = "{fnname}({args})".format(fnname=op.fn.__name__, args=args)
+            cmd = f"{op.fn.__name__}({args})"
             print(cmd)
 
         elif isinstance(op, ChmodOperation):
@@ -183,7 +180,7 @@ def walk_and_run(*ps, fn=None, filter_fn=None, recurse=True, **kwargs):
             fn(p)
 
         else:
-            for (dirname, dirs, files) in os.walk(p_str, **kwargs):
+            for dirname, dirs, files in os.walk(p_str, **kwargs):
                 if filter_fn:
                     filter_fn(dirname, dirs, files)
 
