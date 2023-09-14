@@ -73,7 +73,7 @@ def is_sidecar_for(
 
 def find_sidecar_videos(
     dirpath: Path, ignore_case: bool = False
-) -> List[Tuple[Path, List[Path]]]:
+) -> list[tuple[Path, list[Path]]]:
     def _get_name(fullname: str) -> str:
         nonlocal ignore_case
         if ignore_case:
@@ -83,13 +83,13 @@ def find_sidecar_videos(
 
     sets = {}
 
-    for (root, dirs, files) in os.walk(dirpath):
+    for root, dirs, files in os.walk(dirpath):
         # Group files by name (without ext)
         by_name = {}
-        for (name, group) in itertools.groupby(sorted(files), key=_get_name):
+        for name, group in itertools.groupby(sorted(files), key=_get_name):
             by_name[name] = list(group)
 
-        for (name, group) in by_name.items():
+        for name, group in by_name.items():
             # Find image in group
             images = [x for x in group if is_image(x)]
             if len(images) == 0:
@@ -132,7 +132,7 @@ def main():
             _LOGGER.warning(f"{dirpath}: Skip non-directory")
             continue
 
-        for (master, sidecars) in find_sidecar_videos(
+        for master, sidecars in find_sidecar_videos(
             dirpath, ignore_case=args.ignore_case
         ):
             for sidecar in sidecars:

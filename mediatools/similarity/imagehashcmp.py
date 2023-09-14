@@ -1,7 +1,7 @@
 import io
 import itertools
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from concurrent import futures
 from pathlib import Path
 
@@ -37,40 +37,6 @@ def imagehash_frombytes(data: bytes, *, hash_size=_DEFAULT_HASH_SIZE) -> str:
     with imagehash.Image.open(io.BytesIO(data)) as img:
         # FIXME: use average_hash or phash ?
         return str(imagehash.average_hash(img, hash_size))
-
-
-@click.command("find-duplicates")
-@click.option("--execute", "-x", type=str)
-@click.option(
-    "--hash-size",
-    type=int,
-    default=_DEFAULT_HASH_SIZE,
-    help="powers of 2, lower values more false positives",
-)
-@click.argument("targets", nargs=-1, required=True, type=Path)
-def find_duplicates_cmd(
-    targets: list[Path], hash_size: int, execute: str | None = None
-):
-    click.echo(f"Reading contents of {len(targets)} targets...")
-    images = [x for x in fs.iter_files(*targets) if fs.file_matches_mime(x, "image/*")]
-    click.echo(f"Found {len(images)} images")
-
-    with click.progressbar(length=len(images), label="Calculating image hashes") as bar:
-        dupes = find_duplicates(
-            images,
-            hash_size=hash_size,
-            update_fn=lambda img, imghash: bar.update(1, img),
-        )
-
-    for idx, (imghash, gr) in enumerate(dupes):
-        pathsstr = " ".join(
-            ["'" + img.as_posix().replace("'", "'") + "'" for img in gr]
-        )
-        click.echo(f"Group {idx+1}  ({imghash}): {pathsstr}")
-
-        if execute:
-            cmdl = [execute] + [x.as_posix() for x in gr]
-            spawn.run(*cmdl)
 
 
 def find_duplicates(
@@ -118,3 +84,62 @@ def find_duplicates(
     groups_g = _g(((imghash, gr) for imghash, gr in grouped_g if len(gr) > 1))
 
     return list(groups_g)
+
+
+def unroll_target_files(
+    targets: list[Path], *, recursive: bool = False
+) -> Iterable[Path]:
+    for t in targets:
+        if t.is_file():
+            yield t
+            continue
+
+        if recursive:
+            yield from fs.iter_files(t)
+            continue
+
+        click.echo(f"{click.format_filename(t)}: not a file", err=True)
+        continue
+
+
+@click.command("find-duplicates")
+@click.option("--execute", "-x", type=str)
+@click.option("--recursive", "-r", is_flag=True)
+@click.option(
+    "--hash-size",
+    type=int,
+    default=_DEFAULT_HASH_SIZE,
+    help="powers of 2, lower values more false positives",
+)
+@click.argument("targets", nargs=-1, required=True, type=Path)
+def find_duplicates_cmd(
+    targets: list[Path],
+    hash_size: int,
+    recursive: bool = False,
+    execute: str | None = None,
+):
+    targets = list(unroll_target_files(targets, recursive=recursive))
+
+    if not targets:
+        return
+
+    click.echo(f"Reading contents of {len(targets)} targets...")
+    images = [x for x in fs.iter_files(*targets) if fs.file_matches_mime(x, "image/*")]
+    click.echo(f"Found {len(images)} images")
+
+    with click.progressbar(length=len(images), label="Calculating image hashes") as bar:
+        dupes = find_duplicates(
+            images,
+            hash_size=hash_size,
+            update_fn=lambda img, imghash: bar.update(1, img),
+        )
+
+    for idx, (imghash, gr) in enumerate(dupes):
+        pathsstr = " ".join(
+            ["'" + img.as_posix().replace("'", "'") + "'" for img in gr]
+        )
+        click.echo(f"Group {idx+1}  ({imghash}): {pathsstr}")
+
+        if execute:
+            cmdl = [execute] + [x.as_posix() for x in gr]
+            spawn.run(*cmdl)

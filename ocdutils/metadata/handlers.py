@@ -127,9 +127,9 @@ class ExifJpegBackend(_BaseHandler):
             (piexif.ExifIFD.DateTimeDigitized, piexif.ExifIFD.OffsetTimeDigitized),
         ]
 
-        dt_original, dt_digitalized = [
+        dt_original, dt_digitalized = (
             _get_dt(exif, dt_tag, offset_tag) for (dt_tag, offset_tag) in tags
-        ]
+        )
 
         if not dt_original and not dt_digitalized:
             raise MetadataNotFoundError("exif tags not found")

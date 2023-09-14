@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- encoding: utf-8 -*-
 
 # Copyright (C) 2022 Luis López <luis@cuarentaydos.com>
 #
@@ -37,7 +36,7 @@ class MotionPhotoBytes:
         idx = buff.find(self.marker)
 
         self.image: memoryview
-        self.video: Optional[memoryview]
+        self.video: memoryview | None
 
         if idx >= 0:
             self.image = memoryview(buff[0:idx])

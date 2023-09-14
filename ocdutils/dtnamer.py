@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- encoding: utf-8 -*-
 
 # Copyright (C) 2018 Luis López <luis@cuarentaydos.com>
 #
@@ -95,7 +94,7 @@ class ExifHandler(BaseHandler):
         except piexif.InvalidImageDataError as e:
             raise InvalidFileTypeError() from e
 
-        for (key, (dt_tag, offset_tag)) in t.items():
+        for key, (dt_tag, offset_tag) in t.items():
             try:
                 dt = exif["Exif"][dt_tag].decode("ascii")
             except KeyError:
@@ -134,7 +133,7 @@ class ExifHandler(BaseHandler):
             msg = msg.format(original=t["original"], digitized=t["digitized"])
 
             if self.ignore_original_digitized_diff:
-                warnings.warn("{}: {}".format(p, msg))
+                warnings.warn(f"{p}: {msg}")
             else:
                 raise ValueError(msg)
 
@@ -194,7 +193,7 @@ class ExifHandler(BaseHandler):
             try:
                 self._write_jpeg_exif_tag(filepath, dt)
             except piexif.InvalidImageDataError as e:
-                warnings.warn("{}: {}".format(p, str(e)))
+                warnings.warn(f"{p}: {str(e)}")
 
         elif ext in ["mp4", "m4v", "mov"]:
             self._write_mp4_exif_tag(filepath, dt)
@@ -346,7 +345,7 @@ class NameHandler(BaseHandler):
             "y": r"\d{4}",
         }
 
-        self._tbl = {k: "(?P<{k}>{v})".format(k=k, v=v) for (k, v) in self._tbl.items()}
+        self._tbl = {k: f"(?P<{k}>{v})" for (k, v) in self._tbl.items()}
 
     def validate_format(self, format):
         i = 0
@@ -368,7 +367,7 @@ class NameHandler(BaseHandler):
     def regexify_fmt(self, fmt):
         self.validate_format(fmt)
 
-        for (k, v) in self._tbl.items():
+        for k, v in self._tbl.items():
             fmt = fmt.replace("%" + k, v)
 
         return fmt
@@ -527,7 +526,7 @@ class App:
 
 def extract_subarguments(args, name):
     prefix = name + "_"
-    for (k, v) in vars(args).items():
+    for k, v in vars(args).items():
         if k.startswith(prefix) and v is not None:
             yield (k[len(prefix) :], v)
 
