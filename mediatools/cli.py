@@ -1,7 +1,7 @@
 import click
 
 from . import filesystemfixes, formats, motionphotos, sidecars
-from .similarity import cv2cmp, imagehashcmp
+from .similarity import imagehashcmp
 
 
 @click.group()
