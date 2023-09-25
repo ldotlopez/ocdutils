@@ -13,7 +13,7 @@ from ..lib import filesystem as fs
 from ..lib import spawn
 
 _LOGGER = logging.getLogger(__name__)
-_DEFAULT_HASH_SIZE = 16
+_DEFAULT_HASH_SIZE = 8
 
 
 try:
@@ -105,6 +105,7 @@ def unroll_target_files(
 @click.command("find-duplicates")
 @click.option("--execute", "-x", type=str)
 @click.option("--recursive", "-r", is_flag=True)
+@click.option("--verbose", "-v", is_flag=True)
 @click.option(
     "--hash-size",
     type=int,
@@ -116,6 +117,7 @@ def find_duplicates_cmd(
     targets: list[Path],
     hash_size: int,
     recursive: bool = False,
+    verbose: bool = False,
     execute: str | None = None,
 ):
     targets = list(unroll_target_files(targets, recursive=recursive))
@@ -128,10 +130,17 @@ def find_duplicates_cmd(
     click.echo(f"Found {len(images)} images")
 
     with click.progressbar(length=len(images), label="Calculating image hashes") as bar:
+
+        def update_fn(img, imghash):
+            if verbose:
+                click.echo(f"{img}: hash={imghash}")
+            else:
+                bar.update(1, img)
+
         dupes = find_duplicates(
             images,
             hash_size=hash_size,
-            update_fn=lambda img, imghash: bar.update(1, img),
+            update_fn=update_fn,
         )
 
     for idx, (imghash, gr) in enumerate(dupes):
