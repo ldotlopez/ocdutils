@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- encoding: utf-8 -*-
 
 # Copyright (C) 2022 Luis López <luis@cuarentaydos.com>
 #
@@ -21,9 +20,9 @@
 
 import hashlib
 import unittest
+from pathlib import Path
 
 from ocdutils.motionphotos import MotionPhotoBytes
-from pathlib import Path
 
 DIRPATH = Path(__file__).parent / "assets"
 COMPOSED_FILEPATH = DIRPATH / "motionphoto-composed.jpg"

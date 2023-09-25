@@ -1,8 +1,8 @@
 {
 	"folders":
-	[
-		{
-			"path": ".",
+    [
+        {
+            "path": ".",
 			"folder_exclude_patterns":
 			[
 				"*.egg-info",
@@ -16,7 +16,7 @@
 				"*.pyc",
 				".gitignore",
 			],
-			"follow_symlinks": true,
+			"follow_symlinks": true
 		}
 	],
 

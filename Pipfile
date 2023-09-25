@@ -4,22 +4,23 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+click = "*"
 imagehash = "*"
 mimetypes-magic = "*"
 opencv-python = "*"
 pillow-heif = "*"
-click = "*"
 
 [dev-packages]
-types-python-dateutil = "*"
+black = "*"
+build = "*"
+flake8 = "*"
 ipdb = "*"
 ipython = "*"
-mypy = "*"
-flake8 = "*"
-black = "*"
 isort = "*"
+mypy = "*"
 pre-commit = "*"
-build = "*"
+types-python-dateutil = "*"
+pyupgrade = "*"
 
 [requires]
 python_version = "3.11"

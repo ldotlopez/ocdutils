@@ -1,9 +1,10 @@
-import random
-from pathlib import Path
-import logging
 import argparse
-from .handlers import Factory
+import logging
+import random
 import sys
+from pathlib import Path
+
+from .handlers import Factory
 
 
 def _random_sidefile(filepath: Path) -> Path:

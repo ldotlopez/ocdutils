@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 import binascii
-import io
-import itertools
 import logging
 import sys
-import zlib
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,7 +10,6 @@ import click
 import cv2
 
 from ..lib import filesystem as fs
-from ..lib import generics
 from ..lib.hashing import crc32_hash_frombytes
 
 _LOGGER = logging.getLogger(__name__)
