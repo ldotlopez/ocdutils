@@ -15,8 +15,7 @@
 				"*.lock",
 				"*.pyc",
 				".gitignore",
-			],
-			"follow_symlinks": true
+			],"follow_symlinks": true
 		}
 	],
 

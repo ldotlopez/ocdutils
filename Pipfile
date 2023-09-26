@@ -9,6 +9,7 @@ imagehash = "*"
 mimetypes-magic = "*"
 opencv-python = "*"
 pillow-heif = "*"
+python-magic = "*"
 
 [dev-packages]
 black = "*"
@@ -19,8 +20,8 @@ ipython = "*"
 isort = "*"
 mypy = "*"
 pre-commit = "*"
-types-python-dateutil = "*"
 pyupgrade = "*"
+types-python-dateutil = "*"
 
 [requires]
 python_version = "3.11"
