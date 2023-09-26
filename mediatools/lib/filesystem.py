@@ -99,7 +99,7 @@ def clone_exif(src: Path, dst: Path) -> None:
         dst.as_posix(),
     ]
     if not _DRY_RUN:
-        spawn.run(*cmdl)
+        spawn.run(cmdl)
     else:
         print(" ".join(cmdl))
 

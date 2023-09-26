@@ -9,7 +9,7 @@ def main():
     pass
 
 
-main.add_command(filesystemfixes.fix_extensions_cmd)
+main.add_command(filesystemfixes.filesystem_fixes_cmd)
 main.add_command(motionphotos.motionphoto_cmd)
 main.add_command(imagehashcmp.find_duplicates_cmd)
 main.add_command(sidecars.sidecars_cmd)

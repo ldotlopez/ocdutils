@@ -151,7 +151,7 @@ def find_duplicates_cmd(
 
         if execute:
             cmdl = [execute] + [x.as_posix() for x in gr]
-            spawn.run(*cmdl)
+            spawn.run(cmdl)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 import click
@@ -7,67 +8,82 @@ from .lib import filesystem as fs
 from .lib import spawn
 
 
+def _generic_converter(
+    filepath: Path,
+    destination: Path,
+    convert_fn: Callable[[Path, Path], None],
+    *,
+    overwrite: bool,
+) -> Path:
+    temp = fs.temp_filename(destination)
+
+    convert_fn(filepath, temp)
+
+    return fs.safe_mv(temp, destination, overwrite=overwrite)
+
+
 def heic2jpg(heic: Path, overwrite: bool) -> Path:
-    dest = fs.change_file_extension(heic, "jpg")
-    temp = fs.temp_filename(dest)
+    def convert(src: Path, dst: Path):
+        cmdl = ["convert", "-auto-orient", src.as_posix(), dst.as_posix()]
+        if fs._DRY_RUN:
+            print(" ".join(cmdl))
+        else:
+            spawn.run(cmdl)
 
-    cmdl = ["convert", "-auto-orient", heic.as_posix(), temp.as_posix()]
-    if fs._DRY_RUN:
-        print(" ".join(cmdl))
-    else:
-        spawn.run(*cmdl)
+        fs.clone_exif(src, dst)
+        fs.clone_stat(src, dst)
 
-    fs.clone_exif(heic, temp)
-    fs.clone_stat(heic, temp)
-    return fs.safe_mv(temp, dest, overwrite=overwrite)
+    return _generic_converter(
+        heic, fs.change_file_extension(heic, "jpg"), convert, overwrite=overwrite
+    )
 
 
 def mp4ize(video: Path, *, fallback_acodec: str | None = None, overwrite: bool) -> Path:
-    dest = fs.change_file_extension(video, "mp4")
+    def convert(src: Path, dst: Path):
+        acodecs = ["copy"]
+        if fallback_acodec:
+            acodecs.append(fallback_acodec)
 
-    temp = fs.temp_filename(dest)
+        ffmpeg_ok = False
+        for idx, ca in enumerate(acodecs):
+            try:
+                cmdl = [
+                    "ffmpeg",
+                    "-loglevel",
+                    "warning",
+                    "-y",
+                    "-i",
+                    src.as_posix(),
+                    "-c:v",
+                    "copy",
+                    "-c:a",
+                    ca,
+                    dst.as_posix(),
+                ]
+                if fs._DRY_RUN:
+                    print(" ".join(cmdl))
+                else:
+                    spawn.run(cmdl)
 
-    acodecs = ["copy"]
-    if fallback_acodec:
-        acodecs.append(fallback_acodec)
+                ffmpeg_ok = True
+                break
 
-    ffmpeg_ok = False
-    for idx, ca in enumerate(acodecs):
-        try:
-            cmdl = [
-                "ffmpeg",
-                "-loglevel",
-                "warning",
-                "-y",
-                "-i",
-                video.as_posix(),
-                "-c:v",
-                "copy",
-                "-c:a",
-                ca,
-                temp.as_posix(),
-            ]
-            if fs._DRY_RUN:
-                print(" ".join(cmdl))
-            else:
-                spawn.run(*cmdl)
+            except spawn.ProcessFailure:
+                if dst.exists():
+                    dst.unlink()
 
-            ffmpeg_ok = True
-            break
+                if idx + 1 == len(acodecs):
+                    raise
 
-        except spawn.ProcessFailure:
-            if temp.exists():
-                temp.unlink()
+        if not ffmpeg_ok:
+            raise SystemError()
 
-            if idx + 1 == len(acodecs):
-                raise
+        fs.clone_stat(src, dst)
+        fs.clone_exif(src, dst)
 
-    if not ffmpeg_ok:
-        raise SystemError()
-
-    fs.clone_stat(video, temp)
-    fs.clone_exif(video, temp)
-    return fs.safe_mv(temp, dest, overwrite=overwrite)
+    return _generic_converter(
+        video, fs.change_file_extension(video, "mp4"), convert, overwrite=overwrite
+    )
 
 
 @click.group("formats")

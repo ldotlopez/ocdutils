@@ -4,6 +4,8 @@ from pathlib import Path
 
 import click
 
+from ocdutils import filesystem
+
 from .lib import filesystem as fs
 
 
@@ -35,6 +37,8 @@ def fix_extensions_cmd(targets, *, recursive: bool = False, verbose: bool = Fals
     trs: list[Callable[[Path], Path]] = [
         lowercase_extension_tr,
         functools.partial(replace_extension_tr, haystack=["jpeg"], repl="jpg"),
+        functools.partial(replace_extension_tr, haystack=["mpeg"], repl="mpg"),
+        functools.partial(replace_extension_tr, haystack=["tif"], repl="tiff"),
     ]
 
     if recursive:
@@ -66,7 +70,35 @@ def fix_extensions_cmd(targets, *, recursive: bool = False, verbose: bool = Fals
             click.echo(f"{click.format_filename(path)} → {click.format_filename(dst)}")
 
 
+@click.command("remove-leftovers")
+@click.option("--recursive", "-r", is_flag=True, default=False)
+@click.option("--verbose", "-v", is_flag=True, default=False)
+@click.argument("targets", nargs=-1, required=True, type=Path)
+def remove_leftovers_cmd(targets, *, recursive: bool = False, verbose: bool = False):
+    if recursive:
+        g = fs.walk(*targets)
+    else:
+        g = targets
+
+    for path in g:
+        print(path)
+
+
+@click.group("filesystem-fixes")
+def filesystem_fixes_cmd():
+    pass
+
+
+def iter_over(*paths: Path, recursive: bool, include_roots: bool):
+    for root in paths:
+        pass
+
+
+filesystem_fixes_cmd.add_command(remove_leftovers_cmd)
+filesystem_fixes_cmd.add_command(fix_extensions_cmd)
+
+
 def main():
     import sys
 
-    sys.exit(fix_extensions_cmd())
+    sys.exit(filesystem_fixes_cmd())
