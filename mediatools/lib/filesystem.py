@@ -1,9 +1,11 @@
 import enum
+import logging
 import os
 import random
 import shutil
+import sys
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -12,6 +14,7 @@ import magic
 from . import spawn
 
 _DRY_RUN = os.environ.get("MEDIATOOLS_FS_EFFECTIVE_RUN", 0) != "1"
+_LOGGER = logging.getLogger(__name__)
 
 
 def as_posix(path: Path | str) -> str:
@@ -22,27 +25,76 @@ def get_file_extension(file: Path) -> str:
     return file.suffix.lstrip(".")
 
 
-def walk(*targets: Path):
-    for target in targets:
-        if target.is_file():
-            yield target.parent, [], [target]
+# def walk(targets: list[Path]):
+#     for target in targets:
+#         if target.is_file():
+#             yield target.parent, [], [target]
+
+#         else:
+#             for root, dirs, files in os.walk(target.as_posix()):
+#                 rootp = Path(root)
+#                 dirs2 = [rootp / x for x in dirs]
+#                 files2 = [rootp / x for x in files]
+
+#                 yield root, dirs2, files2
+
+#                 to_exclude = set(dirs) - {x.name for x in dirs2}
+#                 for x in to_exclude:
+#                     dirs.remove(x)
+
+
+def walk(dirpath: Path):
+    if not dirpath.is_dir():
+        raise NotADirectoryError(dirpath)
+
+    for root, dirs, files in os.walk(dirpath.as_posix()):
+        rootp = Path(root)
+        dirs2 = [rootp / x for x in dirs]
+        files2 = [rootp / x for x in files]
+
+        yield root, dirs2, files2
+
+        to_exclude = set(dirs) - {x.name for x in dirs2}
+        for x in to_exclude:
+            dirs.remove(x)
+
+
+def walk_multiple(dirpaths: list[Path]):
+    for dirpath in dirpaths:
+        try:
+            yield from walk(dirpath)
+        except NotADirectoryError:
+            _LOGGER.warning(f"f{dirpath}: not a directory")
+
+
+def iter_files_in_targets(
+    targets,
+    *,
+    recursive: bool = False,
+    error_handler: Callable[[str], None] | None = None,
+):
+    def _error_handler(msg):
+        print(msg, file=sys.stderr)
+
+    error_handler = error_handler or _error_handler
+
+    for item in targets:
+        if not item.exists():
+            error_handler(f"{item.as_posix()}: no such file or directory")
+
+        elif item.is_file():
+            yield item
+
+        elif item.is_dir():
+            if recursive:
+                for _, _, files in walk(item):
+                    yield from files
+
+            else:
+                error_handler(f"{item.as_posix()}: Is a directory, use --recursive?")
 
         else:
-            for root, dirs, files in os.walk(target.as_posix()):
-                rootp = Path(root)
-                dirs2 = [rootp / x for x in dirs]
-                files2 = [rootp / x for x in files]
-
-                yield root, dirs2, files2
-
-                to_exclude = set(dirs) - {x.name for x in dirs2}
-                for x in to_exclude:
-                    dirs.remove(x)
-
-
-def iter_files(*targets: Path):
-    for _, _, files in walk(*targets):
-        yield from files
+            error_handler(f"{item.as_posix()}: unknow type")
 
 
 def file_matches_mime(filepath: Path, mime_glob: str) -> bool:
@@ -59,8 +111,8 @@ def _random_string(len: int = 6) -> str:
     return "".join([random.choice(haystack) for _ in range(len)])
 
 
-def temp_filename(file: Path) -> Path:
-    fd, name = tempfile.mkstemp(file.suffix)
+def temp_filename(file: Path, *, suffix: str | None = None) -> Path:
+    fd, name = tempfile.mkstemp(suffix or file.suffix)
     os.close(fd)
 
     return Path(name)
@@ -109,12 +161,30 @@ def matches_mime(filepath: Path, mime_glob: str) -> bool:
     return fnmatch(mime, mime_glob)
 
 
+def safe_write_text(text: str, destination: Path, overwrite: bool = False) -> Path:
+    if destination.exists() and not overwrite:
+        destination = alternative_filename(destination)
+
+    destination.write_text(text)
+
+    return destination
+
+
+def safe_write_bytes(b: bytes, destination: Path, overwrite: bool = False) -> Path:
+    if destination.exists() and not overwrite:
+        destination = alternative_filename(destination)
+
+    destination.write_bytes(b)
+
+    return destination
+
+
 class _CopyOrMoveOperation(enum.Enum):
     COPY = enum.auto()
     MOVE = enum.auto()
 
 
-def safe_cp_or_mv(
+def _safe_cp_or_mv(
     source: Path,
     destination: Path,
     *,
@@ -152,12 +222,12 @@ def safe_cp_or_mv(
 
 
 def safe_cp(source: Path, destination: Path, *, overwrite: bool = False) -> Path:
-    return safe_cp_or_mv(
+    return _safe_cp_or_mv(
         source, destination, operation=_CopyOrMoveOperation.COPY, overwrite=overwrite
     )
 
 
 def safe_mv(source: Path, destination: Path, *, overwrite: bool = False) -> Path:
-    return safe_cp_or_mv(
+    return _safe_cp_or_mv(
         source, destination, operation=_CopyOrMoveOperation.MOVE, overwrite=overwrite
     )

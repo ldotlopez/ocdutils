@@ -36,25 +36,23 @@ _LOGGER = logging.getLogger(__name__)
 SidecarGroup = list[tuple[str, Path]]
 SidecarGroupSet = list[tuple[str, SidecarGroup]]
 
-_ScanItItem = tuple[str, str, Path]
-
-
-def _scan_it(target: Path, *, recursive: bool = True) -> Iterable[_ScanItItem]:
-    if recursive:
-        g = fs.iter_files(target)
-    else:
-        g = target.iterdir()
-
-    for file in g:
-        ext = fs.get_file_extension(file)
-        yield f"{file.parent}/{file.stem}", ext, file
-
 
 def scan(
-    dir: Path, *_scan_it_args, extensions: list[str] | None = None, **_scan_it_kwargs
+    dirpath: Path,
+    recursive: bool = False,
+    extensions: list[str] | None = None,
 ) -> SidecarGroupSet:
-    # Scan dir and group by common path portion
-    g = _scan_it(dir, *_scan_it_args, **_scan_it_kwargs)
+    return _match(
+        fs.iter_files_in_targets([dirpath], recursive=recursive), extensions=extensions
+    )
+
+
+def _match(filelist: Iterable[Path], extensions: list[str] | None = None):
+    g = (
+        (f"{file.parent}/{file.stem}", fs.get_file_extension(file), file)
+        for file in filelist
+    )
+
     stack = [
         (common, sorted([(key, file) for _, key, file in gr]))
         for common, gr in itertools.groupby(
@@ -76,15 +74,20 @@ def scan(
 
 
 def scan_multiple(
-    dirs: list[Path], *, extensions: list[str] | None = None
+    dirs: list[Path],
+    *args,
+    **kwargs,
 ) -> SidecarGroupSet:
-    return list(chain.from_iterable(scan(d, extensions=extensions) for d in dirs))
+    return list(chain.from_iterable(scan(d, *args, **kwargs) for d in dirs))
 
 
 def find_for_file(file: Path, *args, **kwargs) -> SidecarGroup:
     key = f"{file.parent}/{file.stem}"
 
-    return dict(scan(file.parent, *args, **kwargs))[key]
+    sibilings = list(file.parent.iterdir())
+    m = dict(_match(sibilings))
+
+    return m[key]
 
 
 @click.group("sidecars")
@@ -96,12 +99,13 @@ def sidecars_cmd():
 @click.option(
     "--extension", "-e", "extensions", help="Filter extension matching", multiple=True
 )
+@click.option("--recursive", "-r", is_flag=True, default=False)
 @click.argument("dirs", nargs=-1, required=True, type=Path)
-def scan_cmd(dirs: list[Path], extensions=None):
+def scan_cmd(dirs: list[Path], recursive: bool = False, extensions=None):
     if extensions and len(extensions) < 2:
         raise TypeError("provide at least two extension")
 
-    for _, sidecars in scan_multiple(dirs, extensions=extensions):
+    for _, sidecars in scan_multiple(dirs, recursive=recursive, extensions=extensions):
         # print(f"{common}")
         for key, file in sidecars:
             print(f"{key}: {file}")

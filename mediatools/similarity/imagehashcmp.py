@@ -120,13 +120,11 @@ def find_duplicates_cmd(
     verbose: bool = False,
     execute: str | None = None,
 ):
-    targets = list(unroll_target_files(targets, recursive=recursive))
-
     if not targets:
         return
 
-    click.echo(f"Reading contents of {len(targets)} targets...")
-    images = [x for x in fs.iter_files(*targets) if fs.file_matches_mime(x, "image/*")]
+    files = list(fs.iter_files_in_targets(targets, recursive=recursive))
+    images = [x for x in files if fs.file_matches_mime(x, "image/*")]
     click.echo(f"Found {len(images)} images")
 
     with click.progressbar(length=len(images), label="Calculating image hashes") as bar:

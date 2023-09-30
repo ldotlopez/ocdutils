@@ -93,22 +93,23 @@ def formats_cmd():
 
 @click.command("mp4ize")
 @click.option("--overwrite", is_flag=True, default=False)
+@click.option("--recursive", "-r", is_flag=True, default=False)
 @click.option("--rm", is_flag=True, default=False)
 @click.option("--verbose", "-v", is_flag=True, default=False)
 @click.argument("videos", nargs=-1, required=True, type=Path)
 def mp4ize_cmd(
-    videos,
+    videos: list[Path],
     *,
     format: str = "mp4",
     overwrite: bool = False,
+    recursive: bool = True,
     rm: bool = False,
     verbose: bool = False,
 ):
-    for v in videos:
-        if not v.is_file():
-            click.echo(f"{click.format_filename(v)}: not a file", err=True)
-            continue
+    g = fs.iter_files_in_targets(videos, recursive=recursive)
+    g = (x for x in g if fs.matches_mime(x, "video/*"))
 
+    for v in g:
         remuxed = mp4ize(v, fallback_acodec="aac", overwrite=overwrite)
         if verbose:
             print(f"'{v}' -> '{remuxed}'")
@@ -126,24 +127,24 @@ def mp4ize_cmd(
 @click.option("--verbose", "-v", is_flag=True, default=False)
 @click.argument("images", nargs=-1, required=True, type=Path)
 def jpgize_cmd(
-    images,
+    images: list[Path],
     *,
     overwrite: bool = False,
+    recursive: bool = True,
     rm: bool = False,
     verbose: bool = False,
 ):
-    supported_mime = {"image/heic": heic2jpg}
+    supported_mimes = {"image/heic": heic2jpg}
 
-    for img in images:
-        if not img.is_file():
-            click.echo(f"{click.format_filename(img)}: not a file", err=True)
+    g = fs.iter_files_in_targets(images, recursive=recursive)
+
+    for img in g:
+        mime = fs.file_mime(img)
+        if mime not in supported_mimes:
+            click.echo(f"{click.format_filename(img)}: unsupported format", err=True)
             continue
 
-        mime = fs.file_mime(img)
-        if mime not in supported_mime:
-            click.echo(f"{click.format_filename(img)}: unsupported format", err=True)
-
-        supported_mime[mime](img, overwrite=overwrite)
+        supported_mimes[mime](img, overwrite=overwrite)
 
 
 formats_cmd.add_command(mp4ize_cmd)

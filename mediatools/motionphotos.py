@@ -180,7 +180,7 @@ def join_cmd(image, video, motionphoto):
 @click.command("scan")
 @click.argument("targets", nargs=-1, required=True, type=Path)
 def scan_cmd(targets: list[Path]):
-    for filepath in fs.iter_files(*targets):
+    for filepath in fs.iter_files_in_targets(targets):
         if MotionPhoto(fs.as_posix(filepath)).has_video:
             print(f"+ {filepath}")
         else:
