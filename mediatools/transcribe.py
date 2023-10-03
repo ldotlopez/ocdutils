@@ -33,7 +33,7 @@ import ffmpeg
 from .lib import filesystem as fs
 from .lib import spawn
 
-_LOGGING = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 DEFAULT_BACKEND = "whisper.cpp"
 
