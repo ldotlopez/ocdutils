@@ -1,3 +1,4 @@
+import contextlib
 import enum
 import logging
 import os
@@ -109,6 +110,13 @@ def file_mime(filepath: Path) -> str:
 def _random_string(len: int = 6) -> str:
     haystack = "qwertyuiopasdfghjklzxcvbnm1234567890"
     return "".join([random.choice(haystack) for _ in range(len)])
+
+
+@contextlib.contextmanager
+def temp_dirpath():
+    tmpd = Path(tempfile.mkdtemp())
+    yield tmpd
+    shutil.rmtree(tmpd)
 
 
 def temp_filename(file: Path, *, suffix: str | None = None) -> Path:

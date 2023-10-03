@@ -20,69 +20,97 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-import shutil
 import sys
-import tempfile
+from math import log
 from pathlib import Path
 
 import click
+import ffmpeg
 
 from .lib import filesystem as fs
 from .lib import spawn
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGING = logging.getLogger(__name__)
+
+DEFAULT_BACKEND = "whisper.cpp"
 
 
-def _transcribe_with_whisper_cpp(file: Path, *, model: Path):
-    tmpd = Path(tempfile.mkdtemp())
-    base = tmpd / "transcribe"
-    wav = tmpd / "transcribe.wav"
-    srt = tmpd / "transcribe.srt"
+def _transcribe_with_openai(file: Path, *, model: str = "medium") -> str:
+    with fs.temp_dirpath() as tmpd:
+        base = tmpd / "transcribe"
+        wav = tmpd / "transcribe.m4a"
 
-    spawn.run(
-        [
-            "ffmpeg",
-            "-loglevel",
-            "warning",
-            "-y",
-            "-i",
-            file.as_posix(),
-            "-acodec",
-            "pcm_s16le",
-            "-ac",
-            "1",
-            "-ar",
-            "16000",
-            "-f",
-            "wav",
-            wav.as_posix(),
-        ]
-    )
+        (
+            ffmpeg.input(file.as_posix())
+            .audio.output(wav.as_posix(), format="mp4")
+            .overwrite_output()
+            .run()
+        )
+        with open(wav, "rb") as fh:
+            buff = openai.Audio.transcribe("whisper-1", fh)
 
-    spawn.run(
-        [
-            "whisper.cpp",
-            "-l",
-            os.environ.get("WHISPER_LANGUAGE", "auto"),
-            "--output-srt",
-            "-of",
-            base.as_posix(),
-            "-m",
-            model.as_posix(),
-            wav.as_posix(),
-        ]
-    )
+        data = json.loads(buff)
+        return data["text"]
 
-    buff = srt.read_text()
-    shutil.rmtree(tmpd)
 
-    return buff
+def _transcribe_with_openai_cpp(file: Path, *, modelpath: Path | None = None) -> str:
+    model = modelpath.as_posix() if modelpath else os.environ.get("WHISPER_MODEL_FILE")
+    if not model:
+        raise ValueError("model not defined")
+
+    with fs.temp_dirpath() as tmpd:
+        base = tmpd / "transcribe"
+        wav = tmpd / "transcribe.wav"
+        srt = tmpd / "transcribe.srt"
+
+        (
+            ffmpeg.input(file.as_posix())
+            .output(wav.as_posix(), format="wav", acodec="pcm_s16le", ac=1, ar=16000)
+            .overwrite_output()
+            .run(quiet=True)
+        )
+
+        spawn.run(
+            [
+                "whisper.cpp",
+                "-l",
+                os.environ.get("WHISPER_LANGUAGE", "auto"),
+                "--output-srt",
+                "-of",
+                base.as_posix(),
+                "-m",
+                model,
+                wav.as_posix(),
+            ]
+        )
+
+        return srt.read_text()
+
+
+_BACKENDS = {}
+
+try:
+    import openai
+
+    _BACKENDS["openai"] = _transcribe_with_openai
+except ImportError:
+    _LOGGER.warning("openai not installed, backend not available")
+
+
+def transcribe(file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs) -> str:
+    backends = {
+        "whisper.cpp": _transcribe_with_openai_cpp,
+        "openai": _transcribe_with_openai,
+    }
+
+    return _BACKENDS[backend](file, **kwargs)
 
 
 @click.command("transcribe")
-@click.option("--method", default="whisper.cpp")
+@click.option("--backend", type=str, default=DEFAULT_BACKEND)
 @click.option("--model", type=Path)
 @click.option("--recursive", "-r", is_flag=True, default=False)
 @click.option("--overwrite", is_flag=True, default=False)
@@ -90,12 +118,10 @@ def _transcribe_with_whisper_cpp(file: Path, *, model: Path):
 def transcribe_cmd(
     targets: list[Path],
     model: Path,
-    method: str,
+    backend: str,
     overwrite: bool = False,
     recursive: bool = False,
 ):
-    backends = {"whisper.cpp": _transcribe_with_whisper_cpp}
-
     for file in fs.iter_files_in_targets(
         targets, recursive=recursive, error_handler=lambda x: click.echo(x, err=True)
     ):
@@ -104,7 +130,7 @@ def transcribe_cmd(
             click.echo(f"{file}: not a media file", err=True)
             continue
 
-        transcription = backends[method](file, model=model)
+        transcription = transcribe(file, backend=backend, model=model)
         dest = fs.change_file_extension(file, "srt")
         if dest.exists() and not overwrite:
             click.echo(f"{dest}: already exists")

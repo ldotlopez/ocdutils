@@ -10,6 +10,8 @@ mimetypes-magic = "*"
 opencv-python = "*"
 pillow-heif = "*"
 python-magic = "*"
+appdirs = "*"
+ffmpeg-python = "*"
 
 [dev-packages]
 black = "*"
@@ -21,7 +23,11 @@ isort = "*"
 mypy = "*"
 pre-commit = "*"
 pyupgrade = "*"
-types-python-dateutil = "*"
 
 [requires]
 python_version = "3.11"
+#[whisper]
+#openai-whisper = "*"
+#
+#[openai]
+#openai = "*"
