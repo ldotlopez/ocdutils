@@ -130,7 +130,9 @@ class SrtFmt:
         return ret
 
 
-def _transcribe_with_openai(file: Path, *, model: str = "medium") -> Transcription:
+def _transcribe_with_openai(
+    file: Path, *, model: str = os.environ.get("WHISPER_MODEL", "whisper-1")
+) -> Transcription:
     import openai  # Already loaded, but fixes linter warnings
 
     if api_base := os.environ.get("OPENAI_API_BASE", ""):
