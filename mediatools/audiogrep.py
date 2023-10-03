@@ -1,17 +1,13 @@
 import hashlib
 import logging
-import os
 import sys
-from dataclasses import dataclass
-from functools import cache
 from pathlib import Path
-from typing import Required
 
 import appdirs
 import click
 
 from .lib import filesystem as fs
-from .transcribe import Transcription, transcribe
+from .transcribe import JSONCodec, SrtCodec, Transcription, transcribe
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.setLevel(logging.DEBUG)
@@ -39,11 +35,11 @@ def grep(pattern: str, file: Path, transcribe_backend: str | None = None) -> lis
         _LOGGER.debug(f"transcription not found in cache or not updated")
         transcription = transcribe(file, backend=transcribe_backend)
         cachefile.parent.mkdir(exist_ok=True, parents=True)
-        cachefile.write_text(transcription.json())
+        cachefile.write_text(JSONCodec.encode(transcription))
 
     else:
         _LOGGER.debug(f"transcription found in cache ({cachefile!s})")
-        transcription = Transcription.fromjson(cachefile.read_text())
+        transcription = JSONCodec.decode(cachefile.read_text())
 
     return _grep(pattern, transcription.text)
 

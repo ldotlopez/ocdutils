@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import dataclasses
 import importlib
+import io
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ from pathlib import Path
 
 import click
 import ffmpeg
+import pysrt
 
 from .lib import filesystem as fs
 from .lib import spawn
@@ -39,7 +41,7 @@ DEFAULT_BACKEND = "openai"
 
 _LOGGER = logging.getLogger(__name__)
 
-_BACKENDS = {}
+_BACKENDS: dict[str, Callable] = {}
 
 
 @dataclasses.dataclass
@@ -48,47 +50,75 @@ class Transcription:
     segments: list[Segment] | None = None
     language: str | None = None
 
-    @classmethod
-    def fromjson(cls, text) -> Transcription:
-        raise NotImplementedError()
-
-    def __str__(self) -> str:
-        return self.text
-
-    def json(self) -> str:
-        if self.segments is None:
-            segments = None
-        else:
-            segments = [dataclasses.asdict(x) for x in self.segments]
-
-        return json.dumps(
-            dict(text=self.text, segments=segments, language=self.language)
-        )
-
-    def srt(self) -> str:
-        def fmt(ts):
-            hh = int(ts // 3600)
-            mm = int((ts - (hh * 3600)) // 60)
-            ss = int(ts // 1 % 60)
-            xx = int(ts % 1 * 1000 // 1)
-
-            return f"{hh:02}:{mm:02}:{ss:02},{xx:03}"
-
-        lines = []
-        for idx, s in enumerate(self.segments or []):
-            start = fmt(s.start)
-            end = fmt(s.end)
-
-            lines.extend([str(idx + 1), f"{start} --> {end}", s.text, "", ""])
-
-        return "\n".join(lines)
-
 
 @dataclasses.dataclass
 class Segment:
     start: float
     end: float
     text: str
+
+
+class JSONCodec:
+    @staticmethod
+    def loads(text: str) -> Transcription:
+        raise NotImplementedError()
+
+    @staticmethod
+    def dumps(transcription: Transcription) -> str:
+        if transcription.segments is None:
+            segments = None
+        else:
+            segments = [dataclasses.asdict(x) for x in transcription.segments]
+
+        return json.dumps(
+            dict(
+                text=transcription.text,
+                segments=segments,
+                language=transcription.language,
+            )
+        )
+
+
+class SrtCodec:
+    @staticmethod
+    def loads(text) -> Transcription:
+        def ts_as_float(ts):
+            return (
+                ts.hours * 3600
+                + ts.minutes * 60
+                + ts.seconds
+                + (ts.milliseconds / 1000)
+            )
+
+        sub = pysrt.from_string(text)
+        segments = [
+            Segment(start=ts_as_float(x.start), end=ts_as_float(x.end), text=x.text)
+            for x in sub
+        ]
+        text = "".join([x.text for x in sub]).strip()
+
+        return Transcription(text=text, segments=segments)
+
+    @staticmethod
+    def dumps(transcription: Transcription) -> str:
+        srt = pysrt.SubRipFile(
+            items=[
+                pysrt.SubRipItem(
+                    index=idx + 1,
+                    start=pysrt.SubRipTime.from_ordinal(s.start * 1000),
+                    end=pysrt.SubRipTime.from_ordinal(s.end * 1000),
+                    text=s.text,
+                )
+                for idx, s in enumerate(transcription.segments or [])
+            ]
+        )
+
+        buff = io.StringIO()
+        srt.write_into(buff)
+        ret = buff.getvalue()
+        buff.close()
+
+        return ret
 
 
 def _transcribe_with_openai(file: Path, *, model: str = "medium") -> Transcription:
@@ -158,12 +188,25 @@ def _transcribe_with_whisper_py(
         )
 
 
+def check_availability(name: str) -> bool:
+    for path in os.environ.get("PATH", "").split(":"):
+        test = f"{path}/{name}"
+
+        if not os.path.exists(test):
+            continue
+
+        if os.access(test, os.X_OK):
+            return True
+
+    return False
+
+
 def _transcribe_with_whisper_cpp(
     file: Path,
     *,
     model_filepath: str | Path | None = os.environ.get("WHISPER_MODEL"),
     language: str | None = os.environ.get("WHISPER_LANGUAGE", "auto"),
-) -> str:
+) -> Transcription:
     if isinstance(model_filepath, Path):
         model_filepath = model_filepath.as_posix()
 
@@ -199,22 +242,7 @@ def _transcribe_with_whisper_cpp(
             ]
         )
 
-        return srt.read_text()
-
-
-def _try_load_backend(module_name: str, backend_name: str, fn: Callable) -> bool:
-    global _BACKENDS
-
-    try:
-        importlib.import_module(module_name)
-    except ImportError:
-        _LOGGER.warning(
-            f"{module_name} not installed, backend '{backend_name}' not available"
-        )
-        return False
-
-    _BACKENDS[backend_name] = fn
-    return True
+        return SrtCodec.loads(srt.read_text())
 
 
 def transcribe(
@@ -249,12 +277,22 @@ def transcribe_cmd(
             click.echo(f"{dest}: already exists")
             continue
 
-        dest.write_text(transcription.srt())
+        dest.write_text(SrtCodec.dumps(transcription))
 
 
-_try_load_backend("openai", "openai", _transcribe_with_openai)
-_try_load_backend("whisper", "whisper", _transcribe_with_whisper_py)
+for name, fn in [
+    ("openai", _transcribe_with_openai),
+    ("whisper", _transcribe_with_whisper_py),
+]:
+    try:
+        importlib.import_module(name)
+        _BACKENDS[name] = fn
+    except ImportError:
+        _LOGGER.warning(f"package {name} not installed, backend will be not available")
+        pass
 
+if check_availability("whisper.cpp"):
+    _BACKENDS["whisper.cpp"] = _transcribe_with_whisper_cpp
 
 if __name__ == "__main__":
     sys.exit(transcribe_cmd())
