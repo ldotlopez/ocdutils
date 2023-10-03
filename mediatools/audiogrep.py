@@ -11,7 +11,7 @@ import appdirs
 import click
 
 from .lib import filesystem as fs
-from .transcribe import transcribe
+from .transcribe import Transcription, transcribe
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.setLevel(logging.DEBUG)
@@ -35,17 +35,17 @@ def grep(pattern: str, file: Path, transcribe_backend: str | None = None) -> lis
 
     cachefile = Path(appdirs.user_cache_dir(f"transcriptions/{cs[0]}/{cs[0:2]}/{cs}"))
 
-    if not cachefile.exists() or cachefile.stat().st_mtime != file.stat().st_mtime:
+    if not cachefile.exists():
         _LOGGER.debug(f"transcription not found in cache or not updated")
         transcription = transcribe(file, backend=transcribe_backend)
-        cachefile.parent.mkdir(exist_ok=True)
-        cachefile.write_text(transcription)
+        cachefile.parent.mkdir(exist_ok=True, parents=True)
+        cachefile.write_text(transcription.json())
 
     else:
         _LOGGER.debug(f"transcription found in cache ({cachefile!s})")
-        transcription = cachefile.read_text()
+        transcription = Transcription.fromjson(cachefile.read_text())
 
-    return _grep(pattern, transcription)
+    return _grep(pattern, transcription.text)
 
 
 def _grep(pattern: str, buffer: str, **kwargs) -> list[str]:

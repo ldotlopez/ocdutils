@@ -48,6 +48,10 @@ class Transcription:
     segments: list[Segment] | None = None
     language: str | None = None
 
+    @classmethod
+    def fromjson(cls, text) -> Transcription:
+        raise NotImplementedError()
+
     def __str__(self) -> str:
         return self.text
 
@@ -216,6 +220,7 @@ def _try_load_backend(module_name: str, backend_name: str, fn: Callable) -> bool
 def transcribe(
     file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs
 ) -> Transcription:
+    backend = backend or DEFAULT_BACKEND
     return _BACKENDS[backend](file, **kwargs)
 
 
