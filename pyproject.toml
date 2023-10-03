@@ -9,13 +9,15 @@ universal = 1
 name = "mediatools"
 version = "0.0.0"
 dependencies = [
+    "appdirs",
     "click",
+    "ffmpeg-python",
     "imagehash",
     "mimetypes-magic",
-    # "opencv-python",
-    "piexif",
+    "opencv-python",
     "pillow-heif",
-    "python-dateutil",
+    "pysrt",
+    "python-magic",
     "importlib-metadata; python_version >= '3.11'",
 ]
 
@@ -24,7 +26,9 @@ packages = ["mediatools", "mediatools.lib", "mediatools.similarity"]
 
 [project.scripts]
 mediatools = "mediatools.cli:main"
+mt-agrep = "mediatools.audiogrep:main"
 mt-duplicates = "mediatools.similarity.imagehashcmp:main"
 mt-formats = "mediatools.formats:main"
 mt-motionphotos = "mediatools.motionphotos:main"
 mt-sidecars = "mediatools.sidecars:main"
+mt-transcribe = "mediatools.transcribe:main"

@@ -4,14 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+appdirs = "*"
 click = "*"
+ffmpeg-python = "*"
 imagehash = "*"
 mimetypes-magic = "*"
 opencv-python = "*"
 pillow-heif = "*"
+pysrt = "*"
 python-magic = "*"
-appdirs = "*"
-ffmpeg-python = "*"
 
 [dev-packages]
 black = "*"

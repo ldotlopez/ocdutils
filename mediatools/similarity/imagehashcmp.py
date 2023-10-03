@@ -152,7 +152,11 @@ def find_duplicates_cmd(
             spawn.run(cmdl)
 
 
+def main():
+    return find_duplicates_cmd()
+
+
 if __name__ == "__main__":
     import sys
 
-    sys.exit(find_duplicates_cmd())
+    sys.exit(main())
