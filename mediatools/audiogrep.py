@@ -9,7 +9,7 @@ import appdirs
 import click
 
 from .lib import filesystem as fs
-from .transcribe import JSONCodec, SrtCodec, SrtTimeCodec, Transcription, transcribe
+from .transcribe import JSONFmt, SrtFmt, SrtTimeFmt, Transcription, transcribe
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.setLevel(logging.DEBUG)
@@ -38,17 +38,17 @@ def grep(
 
     if cachefile.exists():
         _LOGGER.debug(f"transcription found in cache ({cachefile!s})")
-        transcription = JSONCodec.loads(cachefile.read_text())
+        transcription = JSONFmt.loads(cachefile.read_text())
 
     elif srtfile.exists():
         _LOGGER.debug(f"transcription found in sidecar file ({srtfile!s})")
-        transcription = SrtCodec.loads(srtfile.read_text())
+        transcription = SrtFmt.loads(srtfile.read_text())
 
     else:
         _LOGGER.debug(f"transcription not found in cache or not updated")
         transcription = transcribe(file, backend=transcribe_backend)
         cachefile.parent.mkdir(exist_ok=True, parents=True)
-        cachefile.write_text(JSONCodec.dumps(transcription))
+        cachefile.write_text(JSONFmt.dumps(transcription))
 
     yield from _grep(pattern, transcription)
 
@@ -73,7 +73,7 @@ def audiogrep_cmd(
 ):
     for file in fs.iter_files_in_targets(files, recursive=recursive):
         for ms, text in grep(pattern, file, transcribe_backend=transcribe_backend):
-            msstr = SrtTimeCodec.as_str(ms)
+            msstr = SrtTimeFmt.as_str(ms)
             print(f"{file} @ {msstr}: {text}")
 
 

@@ -58,7 +58,7 @@ class Segment:
     text: str
 
 
-class SrtTimeCodec:
+class SrtTimeFmt:
     @staticmethod
     def as_int(text: str) -> int:
         return pysrt.SubRipTime.from_string(text).ordinal
@@ -68,7 +68,7 @@ class SrtTimeCodec:
         return str(pysrt.SubRipTime.from_ordinal(ms))
 
 
-class JSONCodec:
+class JSONFmt:
     @staticmethod
     def loads(text: str) -> Transcription:
         data = json.loads(text)
@@ -97,7 +97,7 @@ class JSONCodec:
         )
 
 
-class SrtCodec:
+class SrtFmt:
     @staticmethod
     def loads(text) -> Transcription:
         sub = pysrt.from_string(text)
@@ -251,7 +251,7 @@ def _transcribe_with_whisper_cpp(
             ]
         )
 
-        return SrtCodec.loads(srt.read_text())
+        return SrtFmt.loads(srt.read_text())
 
 
 def transcribe(
@@ -286,7 +286,7 @@ def transcribe_cmd(
             click.echo(f"{dest}: already exists")
             continue
 
-        dest.write_text(SrtCodec.dumps(transcription))
+        dest.write_text(SrtFmt.dumps(transcription))
 
 
 for name, fn in [
