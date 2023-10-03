@@ -47,21 +47,39 @@ _BACKENDS: dict[str, Callable] = {}
 @dataclasses.dataclass
 class Transcription:
     text: str
-    segments: list[Segment] | None = None
+    segments: list[Segment] = dataclasses.field(default_factory=lambda: [])
     language: str | None = None
 
 
 @dataclasses.dataclass
 class Segment:
-    start: float
-    end: float
+    start: int
+    end: int
     text: str
+
+
+class SrtTimeCodec:
+    @staticmethod
+    def as_int(text: str) -> int:
+        return pysrt.SubRipTime.from_string(text).ordinal
+
+    @staticmethod
+    def as_str(ms: int) -> str:
+        return str(pysrt.SubRipTime.from_ordinal(ms))
 
 
 class JSONCodec:
     @staticmethod
     def loads(text: str) -> Transcription:
-        raise NotImplementedError()
+        data = json.loads(text)
+        return Transcription(
+            text=data["text"],
+            segments=[
+                Segment(start=s["start"], end=s["end"], text=s["text"])
+                for s in data.get("segments", [])
+            ],
+            language=data.get("language", None),
+        )
 
     @staticmethod
     def dumps(transcription: Transcription) -> str:
@@ -82,18 +100,9 @@ class JSONCodec:
 class SrtCodec:
     @staticmethod
     def loads(text) -> Transcription:
-        def ts_as_float(ts):
-            return (
-                ts.hours * 3600
-                + ts.minutes * 60
-                + ts.seconds
-                + (ts.milliseconds / 1000)
-            )
-
         sub = pysrt.from_string(text)
         segments = [
-            Segment(start=ts_as_float(x.start), end=ts_as_float(x.end), text=x.text)
-            for x in sub
+            Segment(start=x.start.ordinal, end=x.end.ordinal, text=x.text) for x in sub
         ]
         text = "".join([x.text for x in sub]).strip()
 
@@ -109,7 +118,7 @@ class SrtCodec:
                     end=pysrt.SubRipTime.from_ordinal(s.end * 1000),
                     text=s.text,
                 )
-                for idx, s in enumerate(transcription.segments or [])
+                for idx, s in enumerate(transcription.segments)
             ]
         )
 
