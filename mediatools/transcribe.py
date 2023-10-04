@@ -68,11 +68,11 @@ class Segment:
 
 class SrtTimeFmt:
     @staticmethod
-    def as_int(text: str) -> int:
+    def str_to_int(text: str) -> int:
         return pysrt.SubRipTime.from_string(text).ordinal
 
     @staticmethod
-    def as_str(ms: int) -> str:
+    def int_to_str(ms: int) -> str:
         return str(pysrt.SubRipTime.from_ordinal(ms))
 
 
