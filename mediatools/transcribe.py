@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import importlib
 import io
@@ -27,11 +28,12 @@ import json
 import logging
 import os
 import sys
-from collections.abc import Callable
+from abc import abstractmethod
 from pathlib import Path
 
 import click
 import ffmpeg
+import openai
 import pysrt
 
 from .lib import filesystem as fs
@@ -41,7 +43,13 @@ DEFAULT_BACKEND = "openai"
 
 _LOGGER = logging.getLogger(__name__)
 
-_BACKENDS: dict[str, Callable] = {}
+_BACKENDS: dict[str, type[BaseTranscriptor]] = {}
+
+
+class BaseTranscriptor:
+    @abstractmethod
+    def transcribe(self, file: Path, **kwargs) -> Transcription:
+        ...
 
 
 @dataclasses.dataclass
@@ -130,73 +138,106 @@ class SrtFmt:
         return ret
 
 
-def _transcribe_with_openai(
-    file: Path, *, model: str = os.environ.get("WHISPER_MODEL", "whisper-1")
-) -> Transcription:
-    import openai  # Already loaded, but fixes linter warnings
+class OpenAI(BaseTranscriptor):
+    def __init__(
+        self,
+        *,
+        model: str = os.environ.get("WHISPER_MODEL", "whisper-1"),
+        api_base=os.environ.get("OPENAI_API_BASE", ""),
+        api_key: str = os.environ.get("OPENAI_API_KEY", ""),
+    ) -> None:
+        self.model = model
+        self.api_base = api_base
+        self.api_key = api_key
 
-    if api_base := os.environ.get("OPENAI_API_BASE", ""):
-        openai.api_base = api_base
+    @contextlib.contextmanager
+    def custom_api_ctx(self):
+        base = openai.api_base
+        key = openai.api_key
 
-    if api_key := os.environ.get("OPENAI_API_KEY", ""):
-        openai.api_key = api_key
+        if self.api_base:
+            openai.api_base = self.api_base
+        if self.api_key:
+            openai.api_key = self.api_key
 
-    with fs.temp_dirpath() as tmpd:
-        wav = tmpd / "transcribe.m4a"
+        yield
 
-        (
-            ffmpeg.input(file.as_posix())
-            .audio.output(wav.as_posix(), format="mp4")
-            .overwrite_output()
-            .run()
-        )
+        openai.api_base = base
+        openai.api_key = key
 
-        with open(wav, "rb") as fh:
-            resp = openai.Audio.transcribe("whisper-1", fh)
+    def transcribe(self, file: Path) -> Transcription:  # type: ignore[override]
+        import openai  # Already loaded, but fixes linter warnings
 
-        return Transcription(
-            text=resp["text"].strip(),
-            segments=[
-                Segment(start=x["start"], end=x["end"], text=x["text"].strip())
-                for x in resp["segments"]
-            ],
-            language=resp.get("language"),
-        )
+        with self.custom_api_ctx():
+            with fs.temp_dirpath() as tmpd:
+                wav = tmpd / "transcribe.m4a"
+
+                (
+                    ffmpeg.input(file.as_posix())
+                    .audio.output(wav.as_posix(), format="mp4")
+                    .overwrite_output()
+                    .run()
+                )
+
+                with open(wav, "rb") as fh:
+                    resp = openai.Audio.transcribe(self.model, fh)
+
+                return Transcription(
+                    text=resp["text"].strip(),
+                    segments=[
+                        Segment(
+                            start=x["start"] // 1_000_000_000,
+                            end=x["end"] // 1_000_000_000,
+                            text=x["text"].strip(),
+                        )
+                        for x in resp.get("segments") or []
+                    ],
+                    language=resp.get("language"),
+                )
 
 
-def _transcribe_with_whisper_py(
-    file: Path,
-    *,
-    model_name: str | None = os.environ.get("WHISPER_MODEL"),
-    language: str | None = os.environ.get("WHISPER_LANGUAGE", None),
-) -> Transcription:
-    import whisper  # Already loaded, but fixes linter warnings
+class WhisperPy(BaseTranscriptor):
+    def __init__(
+        self, *, model_name: str | None = os.environ.get("WHISPER_MODEL")
+    ) -> None:
+        if not model_name:
+            raise ValueError("model not defined")
 
-    if not model_name:
-        raise ValueError("model not defined")
+        self.model_name = model_name
 
-    _LOGGER.debug(f"whisper model: {model_name}")
-    _LOGGER.debug(f"whisper language: {language or 'auto'}")
-    m = whisper.load_model(model_name)
+    @property
+    def model(self):
+        if self._model is None:
+            self._model = whisper.load_model(self.model_name)
 
-    with fs.temp_dirpath() as tmpd:
-        wav = tmpd / "audio.wav"
-        (
-            ffmpeg.input(file.as_posix())
-            .output(wav.as_posix(), format="wav", acodec="pcm_s16le", ac=1, ar=16000)
-            .overwrite_output()
-            .run(quiet=True)
-        )
-        res = m.transcribe(file.as_posix(), language=language)
+        return self._model
 
-        return Transcription(
-            text=res["text"].strip(),
-            segments=[
-                Segment(start=x["start"], end=x["end"], text=x["text"].strip())
-                for x in res["segments"]
-            ],
-            language=res.get("language"),
-        )
+    def transcribe(  # type: ignore[override]
+        self,
+        file: Path,
+        *,
+        language: str | None = os.environ.get("WHISPER_LANGUAGE", None),
+    ) -> Transcription:
+        with fs.temp_dirpath() as tmpd:
+            wav = tmpd / "audio.wav"
+            (
+                ffmpeg.input(file.as_posix())
+                .output(
+                    wav.as_posix(), format="wav", acodec="pcm_s16le", ac=1, ar=16000
+                )
+                .overwrite_output()
+                .run(quiet=True)
+            )
+            res = self.model.transcribe(file.as_posix(), language=language)
+
+            return Transcription(
+                text=res["text"].strip(),
+                segments=[
+                    Segment(start=x["start"], end=x["end"], text=x["text"].strip())
+                    for x in res["segments"]
+                ],
+                language=res.get("language"),
+            )
 
 
 def check_availability(name: str) -> bool:
@@ -212,55 +253,71 @@ def check_availability(name: str) -> bool:
     return False
 
 
-def _transcribe_with_whisper_cpp(
-    file: Path,
-    *,
-    model_filepath: str | Path | None = os.environ.get("WHISPER_MODEL"),
-    language: str | None = os.environ.get("WHISPER_LANGUAGE", "auto"),
-) -> Transcription:
-    if isinstance(model_filepath, Path):
-        model_filepath = model_filepath.as_posix()
+class WhisperCpp(BaseTranscriptor):
+    def __init__(
+        self, model_filepath: str | Path | None = os.environ.get("WHISPER_MODEL")
+    ) -> None:
+        if isinstance(model_filepath, str):
+            model_filepath = Path(model_filepath)
 
-    if not model_filepath:
-        raise ValueError("model not defined")
+        if model_filepath is None:
+            raise ValueError("model not defined")
 
-    _LOGGER.debug(f"whisper.cpp model: {model_filepath}")
-    _LOGGER.debug(f"whisper.cpp language: {language}")
+        self.model_filepath = model_filepath
 
-    with fs.temp_dirpath() as tmpd:
-        base = tmpd / "transcribe"
-        wav = tmpd / "transcribe.wav"
-        srt = tmpd / "transcribe.srt"
+    def transcribe(
+        self,
+        file: Path,
+        *,
+        language: str | None = os.environ.get("WHISPER_LANGUAGE", "auto"),
+    ) -> Transcription:
+        language = language or "auto"
 
-        (
-            ffmpeg.input(file.as_posix())
-            .output(wav.as_posix(), format="wav", acodec="pcm_s16le", ac=1, ar=16000)
-            .overwrite_output()
-            .run(quiet=True)
-        )
+        _LOGGER.debug(f"whisper.cpp model: {self.model_filepath}")
+        _LOGGER.debug(f"whisper.cpp language: {language}")
 
-        spawn.run(
-            [
-                "whisper.cpp",
-                "-l",
-                language,
-                "--output-srt",
-                "-of",
-                base.as_posix(),
-                "-m",
-                model_filepath,
-                wav.as_posix(),
-            ]
-        )
+        with fs.temp_dirpath() as tmpd:
+            base = tmpd / "transcribe"
+            wav = tmpd / "transcribe.wav"
+            srt = tmpd / "transcribe.srt"
 
-        return SrtFmt.loads(srt.read_text())
+            (
+                ffmpeg.input(file.as_posix())
+                .output(
+                    wav.as_posix(), format="wav", acodec="pcm_s16le", ac=1, ar=16000
+                )
+                .overwrite_output()
+                .run(quiet=True)
+            )
+
+            spawn.run(
+                [
+                    "whisper.cpp",
+                    "-l",
+                    language,
+                    "--output-srt",
+                    "-of",
+                    base.as_posix(),
+                    "-m",
+                    self.model_filepath.as_posix(),
+                    wav.as_posix(),
+                ]
+            )
+
+            return SrtFmt.loads(srt.read_text())
 
 
 def transcribe(
     file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs
 ) -> Transcription:
+    return TranscriptorFactory(backend=backend).transcribe(file, **kwargs)
+
+
+def TranscriptorFactory(
+    backend: str | None = DEFAULT_BACKEND, **kwargs
+) -> BaseTranscriptor:
     backend = backend or DEFAULT_BACKEND
-    return _BACKENDS[backend](file, **kwargs)
+    return _BACKENDS[backend](**kwargs)
 
 
 @click.command("transcribe")
@@ -274,6 +331,8 @@ def transcribe_cmd(
     overwrite: bool = False,
     recursive: bool = False,
 ):
+    transcriptor = TranscriptorFactory(backend=backend)
+
     for file in fs.iter_files_in_targets(
         targets, recursive=recursive, error_handler=lambda x: click.echo(x, err=True)
     ):
@@ -282,7 +341,7 @@ def transcribe_cmd(
             click.echo(f"{file}: not a media file", err=True)
             continue
 
-        transcription = transcribe(file, backend=backend)
+        transcription = transcriptor.transcribe(file)
         dest = fs.change_file_extension(file, "srt")
         if dest.exists() and not overwrite:
             click.echo(f"{dest}: already exists")
@@ -291,19 +350,19 @@ def transcribe_cmd(
         dest.write_text(SrtFmt.dumps(transcription))
 
 
-for name, fn in [
-    ("openai", _transcribe_with_openai),
-    ("whisper", _transcribe_with_whisper_py),
+for name, cls in [
+    ("openai", OpenAI),
+    ("whisper", WhisperPy),
 ]:
     try:
         importlib.import_module(name)
-        _BACKENDS[name] = fn
+        _BACKENDS[name] = cls
     except ImportError:
         _LOGGER.warning(f"package {name} not installed, backend will be not available")
         pass
 
 if check_availability("whisper.cpp"):
-    _BACKENDS["whisper.cpp"] = _transcribe_with_whisper_cpp
+    _BACKENDS["whisper.cpp"] = WhisperCpp
 
 if __name__ == "__main__":
     sys.exit(transcribe_cmd())
