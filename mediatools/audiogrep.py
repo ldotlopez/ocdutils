@@ -73,7 +73,7 @@ def audiogrep_cmd(
 ):
     for file in fs.iter_files_in_targets(files, recursive=recursive):
         for ms, text in grep(pattern, file, transcribe_backend=transcribe_backend):
-            msstr = SrtTimeFmt.as_str(ms)
+            msstr = SrtTimeFmt.int_to_str(ms)
             print(f"{file} @ {msstr}: {text}")
 
 
