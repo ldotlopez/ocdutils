@@ -159,7 +159,6 @@ class OpenAI(BaseTranscriptor):
             openai.api_base = self.api_base
         if self.api_key:
             openai.api_key = self.api_key
-
         yield
 
         openai.api_base = base
@@ -218,7 +217,7 @@ class WhisperPy(BaseTranscriptor):
         *,
         language: str | None = os.environ.get("WHISPER_LANGUAGE", None),
     ) -> Transcription:
-        with fs.temp_dirpath() as tmpd:
+        with fs.temp_dirpath_ctx() as tmpd:
             wav = tmpd / "audio.wav"
             (
                 ffmpeg.input(file.as_posix())
@@ -272,14 +271,13 @@ class WhisperCpp(BaseTranscriptor):
         language: str | None = os.environ.get("WHISPER_LANGUAGE", "auto"),
     ) -> Transcription:
         language = language or "auto"
-
-        _LOGGER.debug(f"whisper.cpp model: {self.model_filepath}")
-        _LOGGER.debug(f"whisper.cpp language: {language}")
-
-        with fs.temp_dirpath() as tmpd:
+        with fs.temp_dirpath_ctx() as tmpd:
             base = tmpd / "transcribe"
             wav = tmpd / "transcribe.wav"
             srt = tmpd / "transcribe.srt"
+
+            _LOGGER.debug(f"whisper.cpp model: {self.model_filepath}")
+            _LOGGER.debug(f"whisper.cpp language: {language}")
 
             (
                 ffmpeg.input(file.as_posix())
@@ -364,5 +362,10 @@ for name, cls in [
 if check_availability("whisper.cpp"):
     _BACKENDS["whisper.cpp"] = WhisperCpp
 
+
+def main():
+    return transcribe_cmd()
+
+
 if __name__ == "__main__":
-    sys.exit(transcribe_cmd())
+    sys.exit(main())

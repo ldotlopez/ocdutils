@@ -128,7 +128,11 @@ sidecars_cmd.add_command(find_cmd)
 sidecars_cmd.add_command(scan_cmd)
 
 
+def main():
+    return sidecars_cmd()
+
+
 if __name__ == "__main__":
     import sys
 
-    sys.exit(sidecars_cmd())
+    sys.exit(main())

@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+
+# Copyright (C) 2022 Luis López <luis@cuarentaydos.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
+
+
 import contextlib
 import enum
 import logging
@@ -24,24 +44,6 @@ def as_posix(path: Path | str) -> str:
 
 def get_file_extension(file: Path) -> str:
     return file.suffix.lstrip(".")
-
-
-# def walk(targets: list[Path]):
-#     for target in targets:
-#         if target.is_file():
-#             yield target.parent, [], [target]
-
-#         else:
-#             for root, dirs, files in os.walk(target.as_posix()):
-#                 rootp = Path(root)
-#                 dirs2 = [rootp / x for x in dirs]
-#                 files2 = [rootp / x for x in files]
-
-#                 yield root, dirs2, files2
-
-#                 to_exclude = set(dirs) - {x.name for x in dirs2}
-#                 for x in to_exclude:
-#                     dirs.remove(x)
 
 
 def walk(dirpath: Path):
@@ -112,18 +114,29 @@ def _random_string(len: int = 6) -> str:
     return "".join([random.choice(haystack) for _ in range(len)])
 
 
-@contextlib.contextmanager
 def temp_dirpath():
-    tmpd = Path(tempfile.mkdtemp())
+    return Path(tempfile.mkdtemp())
+
+
+@contextlib.contextmanager
+def temp_dirpath_ctx(*args, **kwargs):
+    tmpd = temp_dirpath(*args, **kwargs)
     yield tmpd
     shutil.rmtree(tmpd)
 
 
-def temp_filename(file: Path, *, suffix: str | None = None) -> Path:
+def temp_filename(file: Path, *, suffix: str | None = None):
     fd, name = tempfile.mkstemp(suffix or file.suffix)
     os.close(fd)
 
     return Path(name)
+
+
+@contextlib.contextmanager
+def temp_filepath_ctx(*args, **kwargs):
+    tmpf = temp_filename(*args, **kwargs)
+    yield tmpf
+    tmpf.unlink()
 
 
 def posible_filenames(file: Path) -> Iterator[Path]:
