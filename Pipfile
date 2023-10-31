@@ -13,6 +13,9 @@ opencv-python = "*"
 pillow-heif = "*"
 pysrt = "*"
 python-magic = "*"
+openai = "*"
+langdetect = "*"
+iso639 = "*"
 
 [dev-packages]
 black = "*"
@@ -27,8 +30,3 @@ pyupgrade = "*"
 
 [requires]
 python_version = "3.11"
-#[whisper]
-#openai-whisper = "*"
-#
-#[openai]
-#openai = "*"
