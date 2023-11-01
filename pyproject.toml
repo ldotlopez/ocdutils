@@ -13,7 +13,10 @@ dependencies = [
     "click",
     "ffmpeg-python",
     "imagehash",
+    "iso639",
+    "langdetect",
     "mimetypes-magic",
+    "openai",
     "opencv-python",
     "pillow-heif",
     "pysrt",
@@ -32,3 +35,4 @@ mt-formats = "mediatools.formats:main"
 mt-motionphotos = "mediatools.motionphotos:main"
 mt-sidecars = "mediatools.sidecars:main"
 mt-transcribe = "mediatools.transcribe:main"
+txt-tool = "mediatools.text:main"
