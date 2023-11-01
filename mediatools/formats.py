@@ -42,7 +42,7 @@ def _generic_converter(
     return fs.safe_mv(temp, destination, overwrite=overwrite)
 
 
-def heic2jpg(heic: Path, overwrite: bool) -> Path:
+def _with_convert_cmdl(file: Path, overwrite: bool) -> Path:
     def convert(src: Path, dst: Path):
         cmdl = ["convert", "-auto-orient", src.as_posix(), dst.as_posix()]
         if fs._DRY_RUN:
@@ -54,7 +54,7 @@ def heic2jpg(heic: Path, overwrite: bool) -> Path:
         fs.clone_stat(src, dst)
 
     return _generic_converter(
-        heic, fs.change_file_extension(heic, "jpg"), convert, overwrite=overwrite
+        file, fs.change_file_extension(file, "jpg"), convert, overwrite=overwrite
     )
 
 
@@ -154,7 +154,8 @@ def jpgize_cmd(
     rm: bool = False,
     verbose: bool = False,
 ):
-    supported_mimes = {"image/heic": heic2jpg}
+    supported_mimes = {"image/heic": _with_convert_cmdl}
+    supported_mimes = {"image/webp": _with_convert_cmdl}
 
     g = fs.iter_files_in_targets(images, recursive=recursive)
 
@@ -165,6 +166,11 @@ def jpgize_cmd(
             continue
 
         supported_mimes[mime](img, overwrite=overwrite)
+
+        if rm and not fs._DRY_RUN:
+            img.unlink()
+        else:
+            print(f"rm -- {img}")
 
 
 formats_cmd.add_command(mp4ize_cmd)
