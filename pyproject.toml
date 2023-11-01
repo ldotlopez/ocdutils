@@ -27,6 +27,12 @@ dependencies = [
 [tool.setuptools]
 packages = ["mediatools", "mediatools.lib", "mediatools.similarity"]
 
+[tool.black]
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+
 [project.scripts]
 mediatools = "mediatools.cli:main"
 mt-agrep = "mediatools.audiogrep:main"

@@ -16,6 +16,9 @@ python-magic = "*"
 openai = "*"
 langdetect = "*"
 iso639 = "*"
+rembg = "*"
+torch = "*"
+salesforce-lavis = "*"
 
 [dev-packages]
 black = "*"
