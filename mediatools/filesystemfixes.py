@@ -85,7 +85,11 @@ def iter_over(*paths: Path, recursive: bool, include_roots: bool):
 filesystem_fixes_cmd.add_command(fix_extensions_cmd)
 
 
-def main():
+def main(*args) -> int:
+    return filesystem_fixes_cmd(*args) or 0
+
+
+if __name__ == "__main__":
     import sys
 
-    sys.exit(filesystem_fixes_cmd())
+    sys.exit(main(*sys.argv))

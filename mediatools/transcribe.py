@@ -363,9 +363,11 @@ if check_availability("whisper.cpp"):
     _BACKENDS["whisper.cpp"] = WhisperCpp
 
 
-def main():
-    return transcribe_cmd()
+def main(*args) -> int:
+    return transcribe_cmd(*args) or 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import sys
+
+    sys.exit(main(*sys.argv))

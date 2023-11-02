@@ -156,19 +156,17 @@ def describe_cmd(
     file: click.File,
     device: Literal["cuda"] | Literal["cpu"] | None = None,
     model: str | None = DEFAULT_MODEL,
-) -> int:
+):
     captioner = Captioner(device=device, model=model)
     with Image.open(file) as img:
         click.echo(captioner.caption(img))
 
-    return 0
 
-
-def main() -> int:
-    return describe_cmd()
+def main(*args) -> int:
+    return describe_cmd(*args) or 0
 
 
 if __name__ == "__main__":
     import sys
 
-    sys.exit(main())
+    sys.exit(main(*sys.argv))

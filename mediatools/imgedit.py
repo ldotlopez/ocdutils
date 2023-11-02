@@ -91,7 +91,11 @@ imgedit_cmd.add_command(autocrop_cmd)
 imgedit_cmd.add_command(removebg_cmd)
 
 
-def main():
+def main(*args) -> int:
+    return imgedit_cmd(*args) or 0
+
+
+if __name__ == "__main__":
     import sys
 
-    sys.exit(imgedit_cmd())
+    sys.exit(main(*sys.argv))

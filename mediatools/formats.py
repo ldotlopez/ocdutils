@@ -177,7 +177,11 @@ formats_cmd.add_command(mp4ize_cmd)
 formats_cmd.add_command(jpgize_cmd)
 
 
-def main():
+def main(*args) -> int:
+    return formats_cmd(*args) or 0
+
+
+if __name__ == "__main__":
     import sys
 
-    sys.exit(formats_cmd())
+    sys.exit(main(*sys.argv))

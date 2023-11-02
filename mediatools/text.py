@@ -142,7 +142,11 @@ text_cmd.add_command(summarize_cmd)
 text_cmd.add_command(rewrite_cmd)
 
 
-def main():
+def main(*args) -> int:
+    return text_cmd(*args) or 0
+
+
+if __name__ == "__main__":
     import sys
 
-    sys.exit(text_cmd())
+    sys.exit(main(*sys.argv))

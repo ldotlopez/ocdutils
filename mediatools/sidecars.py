@@ -128,11 +128,11 @@ sidecars_cmd.add_command(find_cmd)
 sidecars_cmd.add_command(scan_cmd)
 
 
-def main():
-    return sidecars_cmd()
+def main(*args) -> int:
+    return sidecars_cmd(*args) or 0
 
 
 if __name__ == "__main__":
     import sys
 
-    sys.exit(main())
+    sys.exit(main(*sys.argv))

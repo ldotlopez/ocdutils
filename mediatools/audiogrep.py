@@ -97,9 +97,11 @@ def audiogrep_cmd(
             print(f"{file} @ {msstr}: {text}")
 
 
-def main():
-    return audiogrep_cmd()
+def main(*args) -> int:
+    return audiogrep_cmd(*args) or 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import sys
+
+    sys.exit(main(*sys.argv))

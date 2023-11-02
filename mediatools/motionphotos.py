@@ -269,10 +269,14 @@ motionphoto_cmd.add_command(insert_cmd)
 motionphoto_cmd.add_command(extract_cmd)
 
 
-def main():
+def main(*args) -> int:
+    return motionphoto_cmd(*args) or 0
+
+
+if __name__ == "__main__":
     import sys
 
-    sys.exit(motionphoto_cmd())
+    sys.exit(main(*sys.argv))
 
 
 if __name__ == "__main__":
