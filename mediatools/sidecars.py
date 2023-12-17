@@ -63,7 +63,7 @@ def _match(filelist: Iterable[Path], extensions: list[str] | None = None):
     # Filter required extensions
     if extensions:
         stack = [
-            (common, [(key, file) for key, file in gr if key in extensions])
+            (common, [(key, file) for key, file in gr if key.lower() in extensions])
             for common, gr in stack
         ]
 

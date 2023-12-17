@@ -34,7 +34,7 @@ import magic
 
 from . import spawn
 
-_DRY_RUN = os.environ.get("MEDIATOOLS_FS_EFFECTIVE_RUN", 0) != "1"
+_DRY_RUN = os.environ.get("MEDIATOOLS_DRY_RUN", "") in ["1", "yes", "true"]
 _LOGGER = logging.getLogger(__name__)
 
 

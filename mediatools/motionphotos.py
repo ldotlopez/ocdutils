@@ -178,9 +178,10 @@ def join_cmd(image, video, motionphoto):
 
 
 @click.command("scan")
+@click.option("-r", "--recursive", is_flag=True, default=False)
 @click.argument("targets", nargs=-1, required=True, type=Path)
-def scan_cmd(targets: list[Path]):
-    for filepath in fs.iter_files_in_targets(targets):
+def scan_cmd(targets: list[Path], recursive: bool = False):
+    for filepath in fs.iter_files_in_targets(targets, recursive=recursive):
         if MotionPhoto(fs.as_posix(filepath)).has_video:
             print(f"+ {filepath}")
         else:
@@ -188,15 +189,25 @@ def scan_cmd(targets: list[Path]):
 
 
 @click.command("scan-and-merge")
+@click.option("-r", "--recursive", is_flag=True, default=False)
+@click.option("--rm", is_flag=True, default=False)
 @click.argument("dirs", nargs=-1, required=True, type=Path)
-def scan_and_merge(dirs: list[Path]):
-    for _, gr in sidecars.scan_multiple(dirs, extensions=["jpg", "mp4"]):
+def scan_and_merge(dirs: list[Path], recursive: bool = False, rm: bool = False):
+    for _, gr in sidecars.scan_multiple(
+        dirs, recursive=recursive, extensions=["jpg", "mp4"]
+    ):
         m = dict(gr)
-        join(m["jpg"], m["mp4"], m["jpg"])
+
         if fs._DRY_RUN:
-            print(f"rm -f -- {m['mp4']}")
+            print(f"# merge '{m['jpg']}' '{m['mp4']}'")
         else:
-            os.unlink(m["mp4"])
+            join(m["jpg"], m["mp4"], m["jpg"])
+
+        if rm:
+            if fs._DRY_RUN:
+                print(f"rm -f -- {m['mp4']}")
+            else:
+                os.unlink(m["mp4"])
 
 
 @click.command("insert")

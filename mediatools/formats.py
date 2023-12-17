@@ -154,18 +154,25 @@ def jpgize_cmd(
     rm: bool = False,
     verbose: bool = False,
 ):
-    supported_mimes = {"image/heic": _with_convert_cmdl}
-    supported_mimes = {"image/webp": _with_convert_cmdl}
+    supported_mimes = {
+        "image/heic": _with_convert_cmdl,
+        "image/webp": _with_convert_cmdl,
+    }
+    supported_extensions = {"heic": _with_convert_cmdl, "webp": _with_convert_cmdl}
 
     g = fs.iter_files_in_targets(images, recursive=recursive)
 
     for img in g:
         mime = fs.file_mime(img)
-        if mime not in supported_mimes:
-            click.echo(f"{click.format_filename(img)}: unsupported format", err=True)
+        convert_fn = supported_mimes.get(mime, None) or supported_extensions.get(
+            img.suffix.lstrip(".").lower(), None
+        )
+
+        if convert_fn is None:
+            click.echo(f"{click.format_filename(img)}: unsupported", err=True)
             continue
 
-        supported_mimes[mime](img, overwrite=overwrite)
+        convert_fn(img, overwrite=overwrite)
 
         if rm and not fs._DRY_RUN:
             img.unlink()

@@ -21,7 +21,7 @@
 from pathlib import Path
 
 import click
-import PIL.Image
+from PIL import Image
 
 from .lib import filesystem as fs
 
@@ -33,7 +33,7 @@ _CLIP_IMPORTED = False
 @click.argument("file", type=click.File(mode="rb"))
 def autocrop_cmd(file: click.File):
     path = Path(file.name)
-    with PIL.Image.open(file) as img:
+    with Image.open(file) as img:
         output_path = Path(f"{path.parent / path.stem}.cropped.png")
         out = autocrop(img)
         out.save(output_path)
@@ -41,41 +41,35 @@ def autocrop_cmd(file: click.File):
         fs.clone_stat(path, output_path)
 
 
-@click.command("describe")
-@click.argument("file", type=click.File(mode="rb"))
-def describe_cmd(file: click.File):
-    with PIL.Image.open(file) as img:
-        return describe(img)
-
-
 @click.command("removebg")
 @click.argument("file", type=click.File(mode="rb"))
 def removebg_cmd(file: click.File):
     path = Path(file.name)
 
-    with PIL.Image.open(file) as img:
-        output_path = Path(f"{path.parent / path.stem}.removebg.png")
+    with Image.open(file) as img:
+        output_path = Path(f"{path.parent / path.stem}.removebg{path.suffix}")
         out = autocrop(remove_background(img))
         out.save(output_path)
         fs.clone_exif(path, output_path)
         fs.clone_stat(path, output_path)
 
 
-def remove_background(img: PIL.Image) -> PIL.Image:
+def remove_background(img: Image.Image) -> Image.Image:
     global _REMBG_IMPORTED
     if not _REMBG_IMPORTED:
         import rembg
 
         _REMBG_IMPORTED = True
-
     return rembg.remove(img)
 
 
-def autocrop(img: PIL.Image) -> PIL.Image:
+def autocrop(img: Image.Image) -> Image.Image:
     if img.mode != "RGBA":
-        img = img.convert("RGBA")
+        aimg = img.convert("RGBA")
+    else:
+        aimg = img
 
-    alpha = img.split()[-1]
+    alpha = aimg.split()[-1]
     bbox = alpha.getbbox()
     ret = img.crop(bbox)
 

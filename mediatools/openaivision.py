@@ -2,7 +2,6 @@ import base64
 import contextlib
 import logging
 import os
-from typing import Optional
 
 import click
 import openai
