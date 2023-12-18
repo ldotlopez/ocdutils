@@ -12,8 +12,8 @@ LOGGER = logging.getLogger(__name__)
 class OpenAIBackend:
     @contextlib.contextmanager
     def custom_api(self):
-        api_base = (os.environ.get("OPENAI_API_BASE", ""),)
-        api_key = (os.environ.get("OPENAI_API_KEY", ""),)
+        api_base = os.environ.get("OPENAI_API_BASE", "")
+        api_key = os.environ.get("OPENAI_API_KEY", "")
 
         kwargs = {}
         if api_base:
