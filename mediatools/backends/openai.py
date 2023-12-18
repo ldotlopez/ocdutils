@@ -2,14 +2,19 @@ import base64
 import contextlib
 import logging
 import os
+from pathlib import Path
 
 import click
+import ffmpeg
 import openai
+
+from ..lib import filesystem as fs
+from .modellib import Segment, Transcription
 
 LOGGER = logging.getLogger(__name__)
 
 
-class OpenAIBackend:
+class OpenAI:
     @contextlib.contextmanager
     def custom_api(self):
         api_base = os.environ.get("OPENAI_API_BASE", "")
@@ -55,8 +60,36 @@ class OpenAIBackend:
 
             return response.choices[0].message.content.strip()
 
+    def transcribe(self, file: Path, *, model: str | None = "whisper-1") -> Transcription:  # type: ignore[override]
+        with fs.temp_dirpath() as tmpd:
+            audio = tmpd / "transcribe.m4a"
 
-class LocalAIBackend(OpenAIBackend):
+            (
+                ffmpeg.input(file.as_posix())
+                .audio.output(audio.as_posix(), format="mp4")
+                .overwrite_output()
+                .run()
+            )
+
+            with self.custom_api() as client:
+                resp = client.audio.transcriptions.create(
+                    model=model, file=audio, response_format="verbose_json"
+                )
+
+            return Transcription(
+                text=resp.text.strip(),
+                segments=[
+                    Segment(
+                        start=x["start"] // 1_000_000_000,
+                        end=x["end"] // 1_000_000_000,
+                        text=x["text"].strip(),
+                    )
+                    for x in resp.segments or []
+                ],
+            )
+
+
+class LocalAI(OpenAI):
     def describe(
         self,
         contents: bytes,
@@ -74,29 +107,3 @@ class LocalAIBackend(OpenAIBackend):
         )
 
         return super().describe(contents, model=model, prompt=prompt)
-
-
-@click.command("openai-vision")
-# @click.option(
-#     "-d", "--device", type=click.Choice(["cpu", "cuda"]), required=False, default=None
-# )
-@click.option("-m", "--model", type=str, required=False, default=None)
-@click.argument("file", type=click.File(mode="rb"))
-def describe_cmd(
-    file: click.File,
-    # device: Literal["cuda"] | Literal["cpu"] | None = None,
-    model: str | None = None,
-):
-    backend = LocalAIBackend()
-    ret = backend.describe(file.read(), model=model)  # type: ignore[attr-defined]
-    print(ret)
-
-
-def main(*args) -> int:
-    return describe_cmd(*args) or 0
-
-
-if __name__ == "__main__":
-    import sys
-
-    sys.exit(main(*sys.argv))

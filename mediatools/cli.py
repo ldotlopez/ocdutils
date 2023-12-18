@@ -24,9 +24,9 @@ from . import (
     audiogrep,
     filesystemfixes,
     formats,
+    imgdescribe,
     imgedit,
     motionphotos,
-    openaivision,
     sidecars,
     text,
     transcribe,
@@ -41,7 +41,7 @@ def main():
 
 main.add_command(audiogrep.audiogrep_cmd)
 main.add_command(imgedit.imgedit_cmd)
-# main.add_command(imgdescribe.describe_cmd)
+main.add_command(imgdescribe.describe_cmd)
 main.add_command(filesystemfixes.fix_extensions_cmd)
 main.add_command(formats.formats_cmd)
 main.add_command(imagehashcmp.find_duplicates_cmd)
@@ -49,4 +49,3 @@ main.add_command(motionphotos.motionphoto_cmd)
 main.add_command(sidecars.sidecars_cmd)
 main.add_command(text.text_cmd)
 main.add_command(transcribe.transcribe_cmd)
-main.add_command(openaivision.describe_cmd)

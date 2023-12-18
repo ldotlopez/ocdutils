@@ -20,7 +20,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import dataclasses
 import importlib
 import io
@@ -36,6 +35,7 @@ import ffmpeg
 import openai
 import pysrt
 
+from .backends import openai
 from .lib import filesystem as fs
 from .lib import spawn
 
@@ -136,63 +136,6 @@ class SrtFmt:
         buff.close()
 
         return ret
-
-
-class OpenAI(BaseTranscriptor):
-    def __init__(
-        self,
-        *,
-        model: str = os.environ.get("WHISPER_MODEL", "whisper-1"),
-        api_base=os.environ.get("OPENAI_API_BASE", ""),
-        api_key: str = os.environ.get("OPENAI_API_KEY", ""),
-    ) -> None:
-        self.model = model
-        self.api_base = api_base
-        self.api_key = api_key
-
-    @contextlib.contextmanager
-    def custom_api_ctx(self):
-        base = openai.api_base
-        key = openai.api_key
-
-        if self.api_base:
-            openai.api_base = self.api_base
-        if self.api_key:
-            openai.api_key = self.api_key
-        yield
-
-        openai.api_base = base
-        openai.api_key = key
-
-    def transcribe(self, file: Path) -> Transcription:  # type: ignore[override]
-        import openai  # Already loaded, but fixes linter warnings
-
-        with self.custom_api_ctx():
-            with fs.temp_dirpath() as tmpd:
-                wav = tmpd / "transcribe.m4a"
-
-                (
-                    ffmpeg.input(file.as_posix())
-                    .audio.output(wav.as_posix(), format="mp4")
-                    .overwrite_output()
-                    .run()
-                )
-
-                with open(wav, "rb") as fh:
-                    resp = openai.Audio.transcribe(self.model, fh)
-
-                return Transcription(
-                    text=resp["text"].strip(),
-                    segments=[
-                        Segment(
-                            start=x["start"] // 1_000_000_000,
-                            end=x["end"] // 1_000_000_000,
-                            text=x["text"].strip(),
-                        )
-                        for x in resp.get("segments") or []
-                    ],
-                    language=resp.get("language"),
-                )
 
 
 class WhisperPy(BaseTranscriptor):
@@ -349,7 +292,7 @@ def transcribe_cmd(
 
 
 for name, cls in [
-    ("openai", OpenAI),
+    ("openai", openai.OpenAI),
     ("whisper", WhisperPy),
 ]:
     try:
