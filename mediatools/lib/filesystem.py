@@ -34,6 +34,12 @@ import magic
 
 from . import spawn
 
+if (_WHICH_TEST := shutil.which("exiftool")) is None:
+    raise SystemError("exiftool not in PATH")
+
+EXIFTOOL_PATH: str = _WHICH_TEST
+
+
 _DRY_RUN = os.environ.get("MEDIATOOLS_DRY_RUN", "") in ["1", "yes", "true"]
 _LOGGER = logging.getLogger(__name__)
 
@@ -164,7 +170,7 @@ def clone_stat(src: Path, dst: Path) -> None:
 
 def clone_exif(src: Path, dst: Path) -> None:
     cmdl = [
-        "exiftool",
+        EXIFTOOL_PATH,
         "-preserve",
         "-overwrite_original",
         "-tagsFromFile",

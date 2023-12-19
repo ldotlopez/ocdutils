@@ -23,6 +23,7 @@ from __future__ import annotations
 import io
 import logging
 import os
+import shutil
 from pathlib import Path
 
 import ffmpeg
@@ -31,6 +32,16 @@ import pysrt
 from ..lib import filesystem as fs
 from ..lib import spawn
 from . import Segment, Transcription, Transcriptor
+
+if shutil.which("ffmpeg") is None:
+    raise SystemError("ffmpeg not in PATH")
+
+
+if (_WHICH_TEST := shutil.which("whisper.cpp")) is None:
+    raise SystemError("whisper.cpp not in PATH")
+
+WHISPER_CPP_PATH: str = _WHICH_TEST
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -82,7 +93,7 @@ class WhisperCpp(Transcriptor):
 
             spawn.run(
                 [
-                    "whisper.cpp",
+                    WHISPER_CPP_PATH,
                     "-l",
                     language,
                     "--output-srt",

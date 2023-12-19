@@ -23,6 +23,7 @@ import contextlib
 import io
 import logging
 import os
+import shutil
 from pathlib import Path
 from typing import cast
 
@@ -32,6 +33,10 @@ from PIL import Image
 
 from ..lib import filesystem as fs
 from . import ImageDescriptor, Segment, TextCompletion, Transcription, Transcriptor
+
+if shutil.which("ffmpeg") is None:
+    raise SystemError("ffmpeg not in PATH")
+
 
 LOGGER = logging.getLogger(__name__)
 

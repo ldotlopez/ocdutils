@@ -19,6 +19,7 @@
 
 
 import os
+import shutil
 from pathlib import Path
 
 import ffmpeg
@@ -26,6 +27,10 @@ import whisper
 
 from ..lib import filesystem as fs
 from . import Segment, Transcription, Transcriptor
+
+if shutil.which("ffmpeg") is None:
+    raise SystemError("ffmpeg not in PATH")
+
 
 DEFAULT_MODEL = "medium"
 
