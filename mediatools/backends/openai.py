@@ -27,13 +27,13 @@ from pathlib import Path
 import ffmpeg
 import openai
 
+from ..lib import Segment, Transcription, Transcriptor
 from ..lib import filesystem as fs
-from .modellib import Segment, Transcription
 
 LOGGER = logging.getLogger(__name__)
 
 
-class OpenAI:
+class OpenAI(Transcriptor):
     @contextlib.contextmanager
     def custom_api(self):
         api_base = os.environ.get("OPENAI_API_BASE", "")
