@@ -31,9 +31,12 @@ import openai
 from PIL import Image
 
 from ..lib import filesystem as fs
-from . import ImageDescriptor, Segment, Transcription, Transcriptor
+from . import ImageDescriptor, Segment, TextCompletion, Transcription, Transcriptor
 
 LOGGER = logging.getLogger(__name__)
+
+OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
+
 
 OPENAI_VISION_MODEL: str = os.environ.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
 OPENAI_VISION_PROMPT: str = os.environ.get(
@@ -47,7 +50,7 @@ OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
 MAX_IMAGE_SIZE: int = int(os.environ.get("MEDIATOOLS_DESCRIBE_IMAGE_MAX_SIZE", "1024"))
 
 
-class OpenAI(ImageDescriptor, Transcriptor):
+class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
     @contextlib.contextmanager
     def custom_api(self):
         api_base = os.environ.get("OPENAI_API_BASE", "")
@@ -60,6 +63,19 @@ class OpenAI(ImageDescriptor, Transcriptor):
             kwargs["api_key"] = api_key
 
         yield openai.OpenAI(**kwargs)
+
+    def complete(
+        self, system: str, text: str, *, model: str | None = OPENAI_CHAT_MODEL
+    ) -> str:
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": text},
+        ]
+
+        with self.custom_api() as client:
+            resp = client.chat.completions.create(model=model, messages=messages)
+
+        return resp.choices[0].message.content.strip()
 
     def describe(  # type: ignore[override]
         self,
@@ -86,7 +102,8 @@ class OpenAI(ImageDescriptor, Transcriptor):
 
         with self.custom_api() as client:
             img = base64.b64encode(contents).decode("utf-8")
-            LOGGER.warning(f"Asking '{model}' to describe image with '{prompt}'")
+            LOGGER.debug(f"Asking '{model}' to describe image with '{prompt}'")
+
             response = client.chat.completions.create(
                 model=model,
                 messages=[

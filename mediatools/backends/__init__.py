@@ -56,6 +56,12 @@ def get_backend_plus(name: str, cls: str) -> type | None:
         return None
 
 
+class TextCompletion:
+    @abstractmethod
+    def complete(self, system: str, text: str) -> str:
+        ...
+
+
 #
 # Describe
 #

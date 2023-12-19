@@ -27,14 +27,17 @@ import iso639
 import langdetect
 import openai
 
+from .backends import TextCompletion, get_backend_from_map
+
+BACKEND_MAP = {"openai": "OpenAI"}
+DEFAULT_BACKEND = "openai"
+
 
 class Tones(enum.Enum):
     CASUAL = "Use a more casual tone"
     FORMAL = "Use a more formal tone"
     KEEP = "Keep the same tone"
 
-
-DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "mistral")
 
 SUMMARIZE_PROMPT = """You are a text summarize.
 I will provide a text and you will reply with a summmary of that text, and nothing more.
@@ -47,48 +50,47 @@ I will provide a text and you will reply with an alternative version of the text
 Use the {language} language.
 """
 
-if api_base := os.environ.get("OPENAI_BASE", ""):
-    openai.api_base = api_base
 
-if api_key := os.environ.get("OPENAI_KEY", ""):
-    openai.api_key = api_key
-
-
-def detect_language(text: str) -> str:
-    return iso639.to_name(langdetect.detect(text)).split(";")[0].strip().lower()
-
-
-def apply_prompt_on_text(prompt: str, text: str) -> str:
-    messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": text},
-    ]
-
-    resp = openai.ChatCompletion.create(
-        model=DEFAULT_MODEL,
-        messages=messages,
+def TextCompletionFactory(
+    backend: str | None = DEFAULT_BACKEND, **kwargs
+) -> TextCompletion:
+    Completion = get_backend_from_map(
+        os.environ.get("MEDIATOOLS_COMPLETION_BACKEND", backend or DEFAULT_BACKEND),
+        BACKEND_MAP,
     )
-    return resp.choices[0].message.content.strip()
+
+    return Completion()
+
+
+def complete(
+    system: str, text: str, *, backend: str | None = DEFAULT_BACKEND, **kwargs
+) -> str:
+    return TextCompletionFactory(backend=backend).complete(system, text, **kwargs)
 
 
 def summarize(text: str, *, language: str | None = None) -> str:
     language = language or detect_language(text)
+
     if language is None:
         raise ValueError(f"unable to detect text language")
 
-    return apply_prompt_on_text(SUMMARIZE_PROMPT.format(language=language), text)
+    return complete(SUMMARIZE_PROMPT.format(language=language), text)
 
 
 def rewrite(
     text: str, *, language: str | None = None, tone: Tones | None = Tones.KEEP
 ) -> str:
     language = language or detect_language(text)
+    tone = tone or Tones.KEEP
+
     if language is None:
         raise ValueError(f"unable to detect text language")
 
-    return apply_prompt_on_text(
-        REWRITE_PROMP.format(language=language, tone=tone.value), text
-    )
+    return complete(REWRITE_PROMP.format(language=language, tone=tone.value), text)
+
+
+def detect_language(text: str) -> str:
+    return iso639.to_name(langdetect.detect(text)).split(";")[0].strip().lower()
 
 
 @click.command("summarize")
@@ -118,11 +120,18 @@ def summarize_cmd(file: str | None = None, language: str | None = None):
 def rewrite_cmd(
     file: str | None = None, tone: str = "keep", language: str | None = None
 ):
-    if file == "-":
+    if file is None:
+        raise ValueError(file)
+
+    elif file == "-":
         buff = sys.stdin.read()
-    else:
+
+    elif isinstance(file, str):
         with open(file, encoding="utf-8") as fh:
             buff = fh.read()
+
+    else:
+        raise ValueError(file)
 
     try:
         tone = tone = getattr(Tones, tone.upper())

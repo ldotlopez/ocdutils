@@ -49,7 +49,8 @@ def describe(file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs) -> 
 @click.command("img-describe")
 @click.argument("file", type=Path)
 def describe_cmd(file: Path):
-    print(describe(file))
+    desc = describe(file)
+    print(f"{file}: {desc}")
 
 
 def main(*args) -> int:
