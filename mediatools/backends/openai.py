@@ -20,6 +20,7 @@
 
 import base64
 import contextlib
+import io
 import logging
 import os
 from pathlib import Path
@@ -27,16 +28,23 @@ from typing import cast
 
 import ffmpeg
 import openai
+from PIL import Image
 
 from ..lib import filesystem as fs
 from . import ImageDescriptor, Segment, Transcription, Transcriptor
 
 LOGGER = logging.getLogger(__name__)
 
+OPENAI_VISION_MODEL: str = os.environ.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
+OPENAI_VISION_PROMPT: str = os.environ.get(
+    "OPENAI_VISION_PROMPT", "What’s in this image?"
+)
+OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
+    "OPENAI_TRANSCRIPTION_MODEL", "whisper-1"
+)
 
-OPENAI_VISION_MODEL = os.environ.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
-OPENAI_VISION_PROMPT = os.environ.get("OPENAI_VISION_PROMPT", "What’s in this image?")
-OPENAI_TRANSCRIPTION_MODEL = os.environ.get("OPENAI_TRANSCRIPTION_MODEL", "whisper-1")
+
+MAX_IMAGE_SIZE: int = int(os.environ.get("MEDIATOOLS_DESCRIBE_IMAGE_MAX_SIZE", "1024"))
 
 
 class OpenAI(ImageDescriptor, Transcriptor):
@@ -63,8 +71,21 @@ class OpenAI(ImageDescriptor, Transcriptor):
         model = cast(str, model or OPENAI_VISION_MODEL)
         prompt = cast(str, prompt or OPENAI_VISION_PROMPT)
 
+        contents = file.read_bytes()
+        with Image.open(io.BytesIO(contents)) as img:
+            if max(img.size) > MAX_IMAGE_SIZE:
+                ratio = MAX_IMAGE_SIZE / max(img.size)
+                new_size = (round(img.size[0] * ratio), round(img.size[1] * ratio))
+
+                img = img.resize(new_size)
+                bs = io.BytesIO()
+                img.save(bs, format="PNG")
+                contents = bs.getvalue()
+
+                LOGGER.info(f"image resizeed to {new_size!r}")
+
         with self.custom_api() as client:
-            img = base64.b64encode(file.read_bytes()).decode("utf-8")
+            img = base64.b64encode(contents).decode("utf-8")
             LOGGER.warning(f"Asking '{model}' to describe image with '{prompt}'")
             response = client.chat.completions.create(
                 model=model,
