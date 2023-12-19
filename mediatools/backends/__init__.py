@@ -97,3 +97,12 @@ class Segment:
     start: int
     end: int
     text: str
+
+
+#
+# Image duplicates
+#
+class ImageDuplicateFinder:
+    @abstractmethod
+    def find(self, images: list[Path]):
+        ...

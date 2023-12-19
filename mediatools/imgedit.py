@@ -101,9 +101,9 @@ def removebg_cmd(file: click.File):
     path = Path(file.name)
 
     with Image.open(file) as img:
-        output_path = Path(f"{path.parent / path.stem}.removebg{path.suffix}")
         out = autocrop(remove_background(img))
 
+        output_path = Path(f"{path.parent / path.stem}.removebg{path.suffix}")
         if output_path.suffix.lower() not in (".png", ".tiff", ".tif"):
             out = remove_transparency(out)
 

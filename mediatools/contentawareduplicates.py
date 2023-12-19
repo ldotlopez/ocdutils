@@ -18,92 +18,40 @@
 # USA.
 
 
-import io
-import itertools
 import logging
-from collections.abc import Callable, Iterable
-from concurrent import futures
+import os
+from collections.abc import Iterable
 from pathlib import Path
 
 import click
 import imagehash
 import PIL
 
-from ..lib import filesystem as fs
-from ..lib import spawn
+from .backends import ImageDuplicateFinder, get_backend_from_map
+from .lib import filesystem as fs
+from .lib import spawn
 
-_LOGGER = logging.getLogger(__name__)
-_DEFAULT_HASH_SIZE = 8
+LOGGER = logging.getLogger(__name__)
+DEFAULT_HASH_SIZE = 8
 
-
-try:
-    from pillow_heif import register_heif_opener
-
-    register_heif_opener()
-except ImportError:
-    _LOGGER.warning("HEIF support not enabled, install pillow-heif")
+BACKEND_MAP = {"imagehash": "ImageDuplicateFinder"}
+DEFAULT_BACKEND = os.environ.get(
+    "MEDIATOOLS_CONTENT_AWARE_DUPLICATES_BACKEND", "imagehash"
+)
 
 
-UpdateFn = Callable[[Path, str | None], None]
+def ImageDuplicateFinderFactory(
+    backend: str | None = DEFAULT_BACKEND, **kwargs
+) -> ImageDuplicateFinder:
+    Cls = get_backend_from_map(backend or DEFAULT_BACKEND, BACKEND_MAP)
 
-
-def imagehash_frompath(path: Path, *, hash_size=_DEFAULT_HASH_SIZE) -> str:
-    # User average_hash or phash?
-    with imagehash.Image.open(fs.as_posix(path)) as img:
-        return str(imagehash.average_hash(img, hash_size))
-
-
-def imagehash_frombytes(data: bytes, *, hash_size=_DEFAULT_HASH_SIZE) -> str:
-    with imagehash.Image.open(io.BytesIO(data)) as img:
-        # FIXME: use average_hash or phash ?
-        return str(imagehash.average_hash(img, hash_size))
+    return Cls()
 
 
 def find_duplicates(
-    images: list[Path],
-    hash_size: int | None = _DEFAULT_HASH_SIZE,
-    update_fn: UpdateFn | None = None,
+    images: list[Path], *, backend: str | None = DEFAULT_BACKEND, **kwargs
 ):
-    hash_size = hash_size or _DEFAULT_HASH_SIZE
-
-    def _g(it):
-        return it
-        # return [x for x in it]
-
-    def map_and_update(item):
-        try:
-            ret = imagehash_frompath(item, hash_size=hash_size)
-        except PIL.UnidentifiedImageError:
-            _LOGGER.warning(f"{item}: unidentified image")
-            ret = None
-
-        if update_fn:
-            update_fn(item, ret)
-
-        return ret
-
-    with futures.ThreadPoolExecutor() as executor:
-        hashes = executor.map(map_and_update, images)
-
-    # zip without None's
-    zip_g = _g(
-        (imghash, image)
-        for (imghash, image) in zip(hashes, images)
-        if imghash is not None
-    )
-
-    # Sort by hash
-    sorted_g = _g(sorted(zip_g, key=lambda x: x[0]))
-
-    # group by hash and strip imghashes
-    grouped_g = _g(
-        (imghash, [img for _, img in gr])
-        for imghash, gr in itertools.groupby(sorted_g, lambda x: x[0])
-    )
-    # Strip unique items
-    groups_g = _g(((imghash, gr) for imghash, gr in grouped_g if len(gr) > 1))
-
-    return list(groups_g)
+    return ImageDuplicateFinderFactory(backend=backend, **kwargs).find(images)
 
 
 def unroll_target_files(
@@ -129,7 +77,7 @@ def unroll_target_files(
 @click.option(
     "--hash-size",
     type=int,
-    default=_DEFAULT_HASH_SIZE,
+    default=DEFAULT_HASH_SIZE,
     help="powers of 2, lower values more false positives",
 )
 @click.argument("targets", nargs=-1, required=True, type=Path)

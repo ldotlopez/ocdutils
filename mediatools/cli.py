@@ -23,6 +23,7 @@ import click
 from . import (
     audiogrep,
     audiotranscribe,
+    contentawareduplicates,
     filesystemfixes,
     formats,
     imgdescribe,
@@ -31,7 +32,8 @@ from . import (
     sidecars,
     texttransform,
 )
-from .similarity import imagehashcmp
+
+# from .similarity import imagehashcmp
 
 
 @click.group()
@@ -51,7 +53,7 @@ def mediatool():
 mediatool.add_command(audiogrep.audiogrep_cmd)
 mediatool.add_command(imgedit.imgedit_cmd)
 mediatool.add_command(formats.formats_cmd)
-mediatool.add_command(imagehashcmp.find_duplicates_cmd)
+mediatool.add_command(contentawareduplicates.find_duplicates_cmd)
 mediatool.add_command(motionphotos.motionphoto_cmd)
 
 
