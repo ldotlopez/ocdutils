@@ -31,9 +31,8 @@ from pathlib import Path
 import click
 import pysrt
 
-from .lib import Segment, Transcription, Transcriptor
+from .backends import Segment, Transcription, Transcriptor, get_backend_from_map
 from .lib import filesystem as fs
-from .lib import get_backend_from_map
 
 LOGGER = logging.getLogger(__name__)
 
@@ -132,7 +131,7 @@ def TranscriptorFactory(
 def transcribe(
     file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs
 ) -> Transcription:
-    return TranscriptorFactory().transcribe(file, **kwargs)
+    return TranscriptorFactory(backend=backend).transcribe(file, **kwargs)
 
 
 @click.command("transcribe")

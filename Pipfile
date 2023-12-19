@@ -17,8 +17,8 @@ openai = "*"
 langdetect = "*"
 iso639 = "*"
 rembg = "*"
-torch = "*"
-salesforce-lavis = "*"
+# salesforce-lavis = "*"
+openai-whisper = "*"
 
 [dev-packages]
 black = "*"

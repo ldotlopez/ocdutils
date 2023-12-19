@@ -23,17 +23,23 @@ import contextlib
 import logging
 import os
 from pathlib import Path
+from typing import cast
 
 import ffmpeg
 import openai
 
-from ..lib import Segment, Transcription, Transcriptor
 from ..lib import filesystem as fs
+from . import ImageDescriptor, Segment, Transcription, Transcriptor
 
 LOGGER = logging.getLogger(__name__)
 
 
-class OpenAI(Transcriptor):
+OPENAI_VISION_MODEL = os.environ.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
+OPENAI_VISION_PROMPT = os.environ.get("OPENAI_VISION_PROMPT", "What’s in this image?")
+OPENAI_TRANSCRIPTION_MODEL = os.environ.get("OPENAI_TRANSCRIPTION_MODEL", "whisper-1")
+
+
+class OpenAI(ImageDescriptor, Transcriptor):
     @contextlib.contextmanager
     def custom_api(self):
         api_base = os.environ.get("OPENAI_API_BASE", "")
@@ -47,18 +53,18 @@ class OpenAI(Transcriptor):
 
         yield openai.OpenAI(**kwargs)
 
-    def describe(
+    def describe(  # type: ignore[override]
         self,
-        contents: bytes,
+        file: Path,
         *,
-        model: str | None = "gpt-4-vision-preview",
-        prompt: str | None = "What’s in this image?",
+        model: str | None = OPENAI_VISION_MODEL,
+        prompt: str | None = OPENAI_VISION_PROMPT,
     ) -> str:
-        model = model or "gpt-4-vision-preview"
-        prompt = prompt or "What’s in this image?"
+        model = cast(str, model or OPENAI_VISION_MODEL)
+        prompt = cast(str, prompt or OPENAI_VISION_PROMPT)
 
         with self.custom_api() as client:
-            img = base64.b64encode(contents).decode("utf-8")
+            img = base64.b64encode(file.read_bytes()).decode("utf-8")
             LOGGER.warning(f"Asking '{model}' to describe image with '{prompt}'")
             response = client.chat.completions.create(
                 model=model,
@@ -77,9 +83,11 @@ class OpenAI(Transcriptor):
                 max_tokens=300,
             )
 
-            return response.choices[0].message.content.strip()
+            return cast(str, response.choices[0].message.content or "").strip()
 
-    def transcribe(self, file: Path, *, model: str | None = "whisper-1") -> Transcription:  # type: ignore[override]
+    def transcribe(self, file: Path, *, model: str | None = OPENAI_TRANSCRIPTION_MODEL) -> Transcription:  # type: ignore[override]
+        model = model or OPENAI_TRANSCRIPTION_MODEL
+
         with fs.temp_dirpath() as tmpd:
             audio = tmpd / "transcribe.m4a"
 
@@ -106,23 +114,3 @@ class OpenAI(Transcriptor):
                     for x in resp.segments or []
                 ],
             )
-
-
-class LocalAI(OpenAI):
-    def describe(
-        self,
-        contents: bytes,
-        *,
-        model: str | None = "llava",
-        prompt: None
-        | (
-            str
-        ) = "What’s in this image? Be brief, it’s for image alt description on a social network. Don’t write in the first person.",
-    ) -> str:
-        model = model or "llava"
-        prompt = (
-            prompt
-            or "What’s in this image? Be brief, it’s for image alt description on a social network. Don’t write in the first person."
-        )
-
-        return super().describe(contents, model=model, prompt=prompt)

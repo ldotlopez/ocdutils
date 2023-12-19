@@ -28,9 +28,9 @@ from pathlib import Path
 import ffmpeg
 import pysrt
 
-from ..lib import Segment, Transcription, Transcriptor
 from ..lib import filesystem as fs
 from ..lib import spawn
+from . import Segment, Transcription, Transcriptor
 
 LOGGER = logging.getLogger(__name__)
 

@@ -24,8 +24,8 @@ from pathlib import Path
 import ffmpeg
 import whisper
 
-from ..lib import Segment, Transcription, Transcriptor
 from ..lib import filesystem as fs
+from . import Segment, Transcription, Transcriptor
 
 DEFAULT_MODEL = "medium"
 

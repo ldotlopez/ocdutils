@@ -20,31 +20,36 @@
 
 import logging
 import os
+from pathlib import Path
 
 import click
-import openai
 
-from .backends import openai
+from .backends import ImageDescriptor, get_backend_from_map
 
 LOGGER = logging.getLogger(__name__)
+DEFAULT_BACKEND = "openai"
+BACKEND_MAP = {"openai": "OpenAI", "lavis": "LAVIS"}
+
+
+def ImageDescriptorFactory(
+    backend: str | None = DEFAULT_BACKEND, **kwargs
+) -> ImageDescriptor:
+    Descriptor = get_backend_from_map(
+        os.environ.get("MEDIATOOLS_DESCRIBE_BACKEND", backend or DEFAULT_BACKEND),
+        BACKEND_MAP,
+    )
+
+    return Descriptor()
+
+
+def describe(file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs) -> str:
+    return ImageDescriptorFactory(backend=backend).describe(file, **kwargs)
 
 
 @click.command("img-describe")
-# @click.option(
-#     "-d", "--device", type=click.Choice(["cpu", "cuda"]), required=False, default=None
-# )
-@click.option("-m", "--model", type=str, required=False, default=None)
-@click.argument("file", type=click.File(mode="rb"))
-def describe_cmd(
-    file: click.File,
-    # device: Literal["cuda"] | Literal["cpu"] | None = None,
-    model: str | None = None,
-):
-    envbackend = os.environ.get("IMG2TXT_BACEND", "open-ai").lower()
-    Backend = {"local-ai": openai.LocalAI, "open-ai": openai.OpenAI}.get(envbackend)
-
-    ret = Backend().describe(file.read(), model=model)  # type: ignore[attr-defined]
-    print(ret)
+@click.argument("file", type=Path)
+def describe_cmd(file: Path):
+    print(describe(file))
 
 
 def main(*args) -> int:
