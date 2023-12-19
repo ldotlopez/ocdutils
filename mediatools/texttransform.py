@@ -142,17 +142,17 @@ def rewrite_cmd(
     click.echo(summmary)
 
 
-@click.group("text")
-def text_cmd():
+@click.group("text-transform")
+def text_transform_cmd():
     pass
 
 
-text_cmd.add_command(summarize_cmd)
-text_cmd.add_command(rewrite_cmd)
+text_transform_cmd.add_command(summarize_cmd)
+text_transform_cmd.add_command(rewrite_cmd)
 
 
 def main(*args) -> int:
-    return text_cmd(*args) or 0
+    return text_transform_cmd(*args) or 0
 
 
 if __name__ == "__main__":

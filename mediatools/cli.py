@@ -22,30 +22,44 @@ import click
 
 from . import (
     audiogrep,
+    audiotranscribe,
     filesystemfixes,
     formats,
     imgdescribe,
     imgedit,
     motionphotos,
     sidecars,
-    text,
-    transcribe,
+    texttransform,
 )
 from .similarity import imagehashcmp
 
 
 @click.group()
-def main():
+def multitool():
     pass
 
 
-main.add_command(audiogrep.audiogrep_cmd)
-main.add_command(imgedit.imgedit_cmd)
-main.add_command(imgdescribe.describe_cmd)
-main.add_command(filesystemfixes.fix_extensions_cmd)
-main.add_command(formats.formats_cmd)
-main.add_command(imagehashcmp.find_duplicates_cmd)
-main.add_command(motionphotos.motionphoto_cmd)
-main.add_command(sidecars.sidecars_cmd)
-main.add_command(text.text_cmd)
-main.add_command(transcribe.transcribe_cmd)
+multitool.add_command(filesystemfixes.fix_extensions_cmd)
+multitool.add_command(sidecars.sidecars_cmd)
+
+
+@click.group()
+def mediatool():
+    pass
+
+
+mediatool.add_command(audiogrep.audiogrep_cmd)
+mediatool.add_command(imgedit.imgedit_cmd)
+mediatool.add_command(formats.formats_cmd)
+mediatool.add_command(imagehashcmp.find_duplicates_cmd)
+mediatool.add_command(motionphotos.motionphoto_cmd)
+
+
+@click.group()
+def glados():
+    pass
+
+
+glados.add_command(audiotranscribe.transcribe_cmd)
+glados.add_command(texttransform.rewrite_cmd)
+glados.add_command(imgdescribe.describe_cmd)

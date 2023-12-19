@@ -34,12 +34,6 @@ target-version = ['py311']
 profile = "black"
 
 [project.scripts]
-mediatools = "mediatools.cli:main"
-mt-agrep = "mediatools.audiogrep:main"
-mt-duplicates = "mediatools.similarity.imagehashcmp:main"
-mt-formats = "mediatools.formats:main"
-mt-motionphotos = "mediatools.motionphotos:main"
-mt-sidecars = "mediatools.sidecars:main"
-mt-transcribe = "mediatools.transcribe:main"
-mt-image-describe = "mediatools.imgdescribe:main"
-txt-tool = "mediatools.text:main"
+mediatool = "mediatools.cli:mediatool"
+multitool = "mediatools.cli:multitool"
+glados = "mediatools.cli:glados"
