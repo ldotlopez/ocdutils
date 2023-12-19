@@ -28,11 +28,14 @@ from pathlib import Path
 import appdirs
 import click
 
+from .audiotranscribe import Transcription
 from .lib import filesystem as fs
-from .transcribe import JSONFmt, SrtFmt, SrtTimeFmt, Transcription, transcribe
 
-_LOGGER = logging.getLogger(__name__)
-_LOGGER.setLevel(logging.DEBUG)
+# from .texttransform import (JSONFmt, SrtFmt, SrtTimeFmt, Transcription,
+#                             transcribe)
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 def _checksum(fh) -> str:
@@ -57,15 +60,15 @@ def grep(
     srtfile = fs.change_file_extension(file, "srt")
 
     if cachefile.exists():
-        _LOGGER.debug(f"transcription found in cache ({cachefile!s})")
+        LOGGER.debug(f"transcription found in cache ({cachefile!s})")
         transcription = JSONFmt.loads(cachefile.read_text())
 
     elif srtfile.exists():
-        _LOGGER.debug(f"transcription found in sidecar file ({srtfile!s})")
+        LOGGER.debug(f"transcription found in sidecar file ({srtfile!s})")
         transcription = SrtFmt.loads(srtfile.read_text())
 
     else:
-        _LOGGER.debug(f"transcription not found in cache or not updated")
+        LOGGER.debug(f"transcription not found in cache or not updated")
         transcription = transcribe(file, backend=transcribe_backend)
         cachefile.parent.mkdir(exist_ok=True, parents=True)
         cachefile.write_text(JSONFmt.dumps(transcription))
