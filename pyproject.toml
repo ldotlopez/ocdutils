@@ -21,6 +21,7 @@ dependencies = [
     "pillow-heif",
     "pysrt",
     "python-magic",
+    "rembg",
     "importlib-metadata; python_version >= '3.11'",
 ]
 
