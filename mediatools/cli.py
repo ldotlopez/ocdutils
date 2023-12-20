@@ -36,7 +36,7 @@ from . import (
 # from .similarity import imagehashcmp
 
 
-@click.group()
+@click.group("multitool")
 def multitool():
     pass
 
@@ -45,7 +45,7 @@ multitool.add_command(filesystemfixes.fix_extensions_cmd)
 multitool.add_command(sidecars.sidecars_cmd)
 
 
-@click.group()
+@click.group("mediatool")
 def mediatool():
     pass
 
@@ -57,7 +57,7 @@ mediatool.add_command(contentawareduplicates.find_duplicates_cmd)
 mediatool.add_command(motionphotos.motionphoto_cmd)
 
 
-@click.group()
+@click.group("glados")
 def glados():
     pass
 
@@ -65,3 +65,13 @@ def glados():
 glados.add_command(audiotranscribe.transcribe_cmd)
 glados.add_command(texttransform.rewrite_cmd)
 glados.add_command(imgdescribe.describe_cmd)
+
+
+@click.group()
+def main():
+    pass
+
+
+main.add_command(glados)
+main.add_command(mediatool)
+main.add_command(multitool)

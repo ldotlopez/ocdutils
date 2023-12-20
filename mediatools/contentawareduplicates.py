@@ -34,9 +34,9 @@ from .lib import spawn
 LOGGER = logging.getLogger(__name__)
 DEFAULT_HASH_SIZE = 8
 
-BACKEND_MAP = {"imagehash": "ImageDuplicateFinder"}
+BACKEND_MAP = {"averagehash": "ImageDuplicateFinder", "cv2histogram": "CV2Matcher"}
 DEFAULT_BACKEND = os.environ.get(
-    "MEDIATOOLS_CONTENT_AWARE_DUPLICATES_BACKEND", "imagehash"
+    "MEDIATOOLS_CONTENT_AWARE_DUPLICATES_BACKEND", "averagehash"
 )
 
 
@@ -52,22 +52,6 @@ def find_duplicates(
     images: list[Path], *, backend: str | None = DEFAULT_BACKEND, **kwargs
 ):
     return ImageDuplicateFinderFactory(backend=backend, **kwargs).find(images)
-
-
-def unroll_target_files(
-    targets: list[Path], *, recursive: bool = False
-) -> Iterable[Path]:
-    for t in targets:
-        if t.is_file():
-            yield t
-            continue
-
-        if recursive:
-            yield from fs.iter_files(t)
-            continue
-
-        click.echo(f"{click.format_filename(t)}: not a file", err=True)
-        continue
 
 
 @click.command("find-duplicates")
@@ -95,6 +79,8 @@ def find_duplicates_cmd(
     images = [x for x in files if fs.file_matches_mime(x, "image/*")]
     click.echo(f"Found {len(images)} images")
 
+    dupes = []
+
     with click.progressbar(length=len(images), label="Calculating image hashes") as bar:
 
         def update_fn(img, imghash):
@@ -109,11 +95,11 @@ def find_duplicates_cmd(
             update_fn=update_fn,
         )
 
-    for idx, (imghash, gr) in enumerate(dupes):
+    for idx, gr in enumerate(dupes):
         pathsstr = " ".join(
             ["'" + img.as_posix().replace("'", "'") + "'" for img in gr]
         )
-        click.echo(f"Group {idx+1}  ({imghash}): {pathsstr}")
+        click.echo(f"Group {idx+1}: {pathsstr}")
 
         if execute:
             cmdl = [execute] + [x.as_posix() for x in gr]

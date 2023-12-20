@@ -49,12 +49,14 @@ class ImageDuplicateFinder:
     def __init__(
         self,
         hash_size: int | None = DEFAULT_HASH_SIZE,
-        update_fn: UpdateFn | None = None,
     ):
         self.hash_size = hash_size or DEFAULT_HASH_SIZE
-        self.update_fn = update_fn
 
-    def find(self, images: list[Path]):
+    def find(
+        self,
+        images: list[Path],
+        update_fn: UpdateFn | None = None,
+    ):
         def _g(it):
             return it
             # return [x for x in it]
@@ -66,8 +68,8 @@ class ImageDuplicateFinder:
                 LOGGER.warning(f"{item}: unidentified image")
                 ret = None
 
-            if self.update_fn:
-                self.update_fn(item, ret)
+            if update_fn:
+                update_fn(item, ret)
 
             return ret
 
@@ -89,8 +91,12 @@ class ImageDuplicateFinder:
             (imghash, [img for _, img in gr])
             for imghash, gr in itertools.groupby(sorted_g, lambda x: x[0])
         )
+
         # Strip unique items
         groups_g = _g(((imghash, gr) for imghash, gr in grouped_g if len(gr) > 1))
+
+        # FIXME: Strip imghash because upstream consumer (command line tool) doesn't support data format
+        groups_g = (gr for (_, gr) in groups_g)
 
         return list(groups_g)
 

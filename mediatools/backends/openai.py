@@ -55,6 +55,10 @@ OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
 MAX_IMAGE_SIZE: int = int(os.environ.get("MEDIATOOLS_DESCRIBE_IMAGE_MAX_SIZE", "1024"))
 
 
+API_BASE = os.environ.get("OPENAI_API_BASE", "")
+API_KEY = os.environ.get("OPENAI_API_KEY", "")
+
+
 class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
     @contextlib.contextmanager
     def custom_api(self):
