@@ -29,8 +29,8 @@ description = "File (and media) manipulation tools"
 license = {file = "LICENSE"}
 
 
-[tool.setuptools.packages.find]
-where = ["mediatools"]
+[tool.setuptools]
+packages = ["mediatools", "mediatools.lib", "mediatools.backends"]
 
 [tool.black]
 target-version = ['py311']
