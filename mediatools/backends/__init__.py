@@ -104,5 +104,5 @@ class Segment:
 #
 class ImageDuplicateFinder:
     @abstractmethod
-    def find(self, images: list[Path]):
+    def find(self, images: list[Path], **kwargs):
         ...

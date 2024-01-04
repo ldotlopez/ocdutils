@@ -15,18 +15,22 @@ dependencies = [
     "imagehash",
     "iso639",
     "langdetect",
-    "mimetypes-magic",
     "openai",
-    "opencv-python",
+    "openai-whisper",
+    "pillow",
     "pillow-heif",
     "pysrt",
     "python-magic",
     "rembg",
     "importlib-metadata; python_version >= '3.11'",
 ]
+readme = "README.md"
+description = "File (and media) manipulation tools"
+license = {file = "LICENSE"}
 
-[tool.setuptools]
-packages = ["mediatools", "mediatools.lib", "mediatools.similarity"]
+
+[tool.setuptools.packages.find]
+where = ["mediatools"]
 
 [tool.black]
 target-version = ['py311']

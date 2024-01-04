@@ -68,6 +68,10 @@ class ImageDuplicateFinder:
                 LOGGER.warning(f"{item}: unidentified image")
                 ret = None
 
+            except OSError as e:
+                LOGGER.warning(f"{item}: {e}")
+                ret = None
+
             if update_fn:
                 update_fn(item, ret)
 

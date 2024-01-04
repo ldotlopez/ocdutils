@@ -44,8 +44,7 @@ def ImageDuplicateFinderFactory(
     backend: str | None = DEFAULT_BACKEND, **kwargs
 ) -> ImageDuplicateFinder:
     Cls = get_backend_from_map(backend or DEFAULT_BACKEND, BACKEND_MAP)
-
-    return Cls()
+    return Cls(**kwargs)
 
 
 def find_duplicates(
@@ -81,6 +80,8 @@ def find_duplicates_cmd(
 
     dupes = []
 
+    finder = ImageDuplicateFinderFactory(hash_size=DEFAULT_HASH_SIZE)
+
     with click.progressbar(length=len(images), label="Calculating image hashes") as bar:
 
         def update_fn(img, imghash):
@@ -89,9 +90,8 @@ def find_duplicates_cmd(
             else:
                 bar.update(1, img)
 
-        dupes = find_duplicates(
+        dupes = finder.find(
             images,
-            hash_size=hash_size,
             update_fn=update_fn,
         )
 
