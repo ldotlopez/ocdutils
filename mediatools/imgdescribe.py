@@ -31,9 +31,7 @@ DEFAULT_BACKEND = "openai"
 BACKEND_MAP = {"openai": "OpenAI", "lavis": "LAVIS"}
 
 
-def ImageDescriptorFactory(
-    backend: str | None = DEFAULT_BACKEND, **kwargs
-) -> ImageDescriptor:
+def ImageDescriptorFactory(backend: str = DEFAULT_BACKEND, **kwargs) -> ImageDescriptor:
     Descriptor = get_backend_from_map(
         os.environ.get("MEDIATOOLS_DESCRIBE_BACKEND", backend or DEFAULT_BACKEND),
         BACKEND_MAP,
@@ -42,15 +40,16 @@ def ImageDescriptorFactory(
     return Descriptor()
 
 
-def describe(file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs) -> str:
+def describe(file: Path, *, backend: str = DEFAULT_BACKEND, **kwargs) -> str:
     return ImageDescriptorFactory(backend=backend).describe(file, **kwargs)
 
 
 @click.command("img-describe")
-@click.argument("file", type=Path)
-def describe_cmd(file: Path):
-    desc = describe(file)
-    print(f"{file}: {desc}")
+@click.argument("file", type=Path, nargs=-1)
+def describe_cmd(file: tuple[Path]):
+    for f in file:
+        desc = describe(f)
+        print(f"{f}: {desc}")
 
 
 def main(*args) -> int:

@@ -42,7 +42,9 @@ def _generic_converter(
     return fs.safe_mv(temp, destination, overwrite=overwrite)
 
 
-def _with_convert_cmdl(file: Path, overwrite: bool) -> Path:
+def _with_convert_cmdl(
+    file: Path, *, output_format: str = "jpg", overwrite: bool
+) -> Path:
     def convert(src: Path, dst: Path):
         cmdl = ["convert", "-auto-orient", src.as_posix(), dst.as_posix()]
         if fs._DRY_RUN:
@@ -54,7 +56,10 @@ def _with_convert_cmdl(file: Path, overwrite: bool) -> Path:
         fs.clone_stat(src, dst)
 
     return _generic_converter(
-        file, fs.change_file_extension(file, "jpg"), convert, overwrite=overwrite
+        file,
+        fs.change_file_extension(file, output_format),
+        convert,
+        overwrite=overwrite,
     )
 
 

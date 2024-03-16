@@ -50,10 +50,10 @@ OPENAI_VISION_PROMPT: str = os.environ.get(
 OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
     "OPENAI_TRANSCRIPTION_MODEL", "whisper-1"
 )
+OPENAI_TRANSCRIPTION_LANGUAGE: str = os.environ.get("OPENAI_TRANSCRIPTION_LANGUAGE", "")
 
 
 MAX_IMAGE_SIZE: int = int(os.environ.get("MEDIATOOLS_DESCRIBE_IMAGE_MAX_SIZE", "1024"))
-
 
 API_BASE = os.environ.get("OPENAI_API_BASE", "")
 API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -62,19 +62,16 @@ API_KEY = os.environ.get("OPENAI_API_KEY", "")
 class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
     @contextlib.contextmanager
     def custom_api(self):
-        api_base = os.environ.get("OPENAI_API_BASE", "")
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-
         kwargs = {}
-        if api_base:
-            kwargs["base_url"] = api_base
-        if api_key:
-            kwargs["api_key"] = api_key
+        if API_BASE:
+            kwargs["base_url"] = API_BASE
+        if API_KEY:
+            kwargs["api_key"] = API_KEY
 
         yield openai.OpenAI(**kwargs)
 
     def complete(
-        self, system: str, text: str, *, model: str | None = OPENAI_CHAT_MODEL
+        self, system: str, text: str, *, model: str = OPENAI_CHAT_MODEL
     ) -> str:
         messages = [
             {"role": "system", "content": system},
@@ -90,14 +87,12 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
         self,
         file: Path,
         *,
-        model: str | None = OPENAI_VISION_MODEL,
-        prompt: str | None = OPENAI_VISION_PROMPT,
+        model: str = OPENAI_VISION_MODEL,
+        prompt: str = OPENAI_VISION_PROMPT,
     ) -> str:
-        model = cast(str, model or OPENAI_VISION_MODEL)
-        prompt = cast(str, prompt or OPENAI_VISION_PROMPT)
+        rawimg = file.read_bytes()
 
-        contents = file.read_bytes()
-        with Image.open(io.BytesIO(contents)) as img:
+        with Image.open(io.BytesIO(rawimg)) as img:
             if max(img.size) > MAX_IMAGE_SIZE:
                 ratio = MAX_IMAGE_SIZE / max(img.size)
                 new_size = (round(img.size[0] * ratio), round(img.size[1] * ratio))
@@ -105,12 +100,12 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
                 img = img.resize(new_size)
                 bs = io.BytesIO()
                 img.save(bs, format="PNG")
-                contents = bs.getvalue()
+                rawimg = bs.getvalue()
 
-                LOGGER.info(f"image resizeed to {new_size!r}")
+                LOGGER.info(f"image resized to {new_size!r}")
 
         with self.custom_api() as client:
-            img = base64.b64encode(contents).decode("utf-8")
+            b64img = base64.b64encode(rawimg).decode("utf-8")
             LOGGER.debug(f"Asking '{model}' to describe image with '{prompt}'")
 
             response = client.chat.completions.create(
@@ -122,7 +117,9 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
                             {"type": "text", "text": prompt},
                             {
                                 "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{b64img}"
+                                },
                             },
                         ],
                     }
@@ -132,12 +129,9 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
 
             return cast(str, response.choices[0].message.content or "").strip()
 
-    def transcribe(self, file: Path, *, model: str | None = OPENAI_TRANSCRIPTION_MODEL) -> Transcription:  # type: ignore[override]
-        model = model or OPENAI_TRANSCRIPTION_MODEL
-
+    def transcribe(self, file: Path, *, model: str = OPENAI_TRANSCRIPTION_MODEL, language: str = OPENAI_TRANSCRIPTION_LANGUAGE) -> Transcription:  # type: ignore[override]
         with fs.temp_dirpath() as tmpd:
             audio = tmpd / "transcribe.m4a"
-
             (
                 ffmpeg.input(file.as_posix())
                 .audio.output(audio.as_posix(), format="mp4")
@@ -147,7 +141,10 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
 
             with self.custom_api() as client:
                 resp = client.audio.transcriptions.create(
-                    model=model, file=audio, response_format="verbose_json"
+                    model=model,
+                    file=audio,
+                    language=language or "",
+                    response_format="verbose_json",
                 )
 
             return Transcription(
