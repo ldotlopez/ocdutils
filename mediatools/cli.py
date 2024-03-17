@@ -32,8 +32,11 @@ from . import (
     sidecars,
     texttransform,
 )
+from .lib import log
 
 # from .similarity import imagehashcmp
+
+log.infect()
 
 
 @click.group("multitool")
