@@ -22,14 +22,20 @@ from __future__ import annotations
 import dataclasses
 import importlib
 import logging
+import os
 from abc import abstractmethod
 from pathlib import Path
+from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 
 
 class BackendError(Exception):
     pass
+
+
+def get_backend_name(sub_module_name: str, *, default: str) -> str:
+    return os.environ.get(f"MEDIATOOLS_{id}_BACKEND", default)
 
 
 def get_backend_from_map(name: str, m: dict[str, str]) -> type:
@@ -106,3 +112,8 @@ class ImageDuplicateFinder:
     @abstractmethod
     def find(self, images: list[Path], **kwargs):
         ...
+
+
+class ImageGroup:
+    group: list[Path]
+    meta: dict[str, Any]
