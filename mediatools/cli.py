@@ -28,6 +28,7 @@ from . import (
     formats,
     imgdescribe,
     imgedit,
+    mediahash,
     motionphotos,
     sidecars,
     texttransform,
@@ -57,6 +58,7 @@ mediatool.add_command(audiogrep.audiogrep_cmd)
 mediatool.add_command(imgedit.imgedit_cmd)
 mediatool.add_command(formats.formats_cmd)
 mediatool.add_command(contentawareduplicates.find_duplicates_cmd)
+mediatool.add_command(mediahash.media_hash_cmd)
 mediatool.add_command(motionphotos.motionphoto_cmd)
 
 

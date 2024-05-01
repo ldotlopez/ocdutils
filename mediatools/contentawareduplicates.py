@@ -27,14 +27,16 @@ import click
 import imagehash
 import PIL
 
-from .backends import ImageDuplicateFinder, get_backend_from_map
+from .backends import ImageDuplicateFinder, get_backend_from_map, get_backend_name
 from .lib import filesystem as fs
 from .lib import spawn
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_HASH_SIZE = 8
 
+DEFAULT_BACKEND = get_backend_name("CONTENT_AWARE_DUPLICATES", default="averagehash")
 BACKEND_MAP = {"averagehash": "ImageDuplicateFinder", "cv2histogram": "CV2Matcher"}
+
 DEFAULT_BACKEND = os.environ.get(
     "MEDIATOOLS_CONTENT_AWARE_DUPLICATES_BACKEND", "averagehash"
 )

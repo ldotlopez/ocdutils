@@ -52,6 +52,9 @@ class ImageDuplicateFinder:
     ):
         self.hash_size = hash_size or DEFAULT_HASH_SIZE
 
+    def hash(self, image: Path) -> str:
+        return imagehash_frompath(image, hash_size=self.hash_size)
+
     def find(
         self,
         images: list[Path],
@@ -63,7 +66,7 @@ class ImageDuplicateFinder:
 
         def map_and_update(item):
             try:
-                ret = imagehash_frompath(item, hash_size=self.hash_size)
+                ret = self.hash(item)
             except PIL.UnidentifiedImageError:
                 LOGGER.warning(f"{item}: unidentified image")
                 ret = None
