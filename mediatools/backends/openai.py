@@ -103,7 +103,7 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
 
         with self.custom_api() as client:
             b64img = base64.b64encode(rawimg).decode("utf-8")
-            LOGGER.debug(f"Asking '{model}' to describe image with '{prompt}'")
+            LOGGER.info(f"Asking '{model}' to describe image with '{prompt}'")
 
             response = client.chat.completions.create(
                 model=model,
