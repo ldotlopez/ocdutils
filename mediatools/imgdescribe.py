@@ -25,6 +25,8 @@ from pathlib import Path
 import click
 
 from .backends import ImageDescriptor, get_backend_from_map
+from .lib import filesystem as fs
+from .lib import spawn
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_BACKEND = "openai"
@@ -44,12 +46,33 @@ def describe(file: Path, *, backend: str = DEFAULT_BACKEND, **kwargs) -> str:
     return ImageDescriptorFactory(backend=backend).describe(file, **kwargs)
 
 
+def write_comnent(file: Path, comment: str):
+    with fs.temp_dirpath() as d:
+        temp = fs.safe_cp(file, d / file.name)
+
+        cmdl = ["exiftool", "-Comment={comment}", temp.as_posix()]
+        try:
+            spawn.run(cmdl)
+        except spawn.ProcessFailure as e:
+            pass
+
+        fs.clone_exif(file, temp)
+        fs.clone_stat(file, temp)
+
+        fs.safe_mv(temp, file, overwrite=True)
+
+
 @click.command("img-describe")
+@click.option(
+    "--write", "-w", is_flag=True, default=False, help="Write description into file"
+)
 @click.argument("file", type=Path, nargs=-1)
-def describe_cmd(file: tuple[Path]):
+def describe_cmd(file: tuple[Path], write: bool = False):
     for f in file:
         desc = describe(f)
         print(f"{f}: {desc}")
+        if write:
+            write_comnent(f, desc)
 
 
 def main(*args) -> int:
