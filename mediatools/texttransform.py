@@ -25,7 +25,6 @@ import sys
 import click
 import iso639
 import langdetect
-import openai
 
 from .backends import TextCompletion, get_backend_from_map
 
@@ -72,7 +71,7 @@ def summarize(text: str, *, language: str | None = None) -> str:
     language = language or detect_language(text)
 
     if language is None:
-        raise ValueError(f"unable to detect text language")
+        raise ValueError("unable to detect text language")
 
     return complete(SUMMARIZE_PROMPT.format(language=language), text)
 
@@ -84,7 +83,7 @@ def rewrite(
     tone = tone or Tones.KEEP
 
     if language is None:
-        raise ValueError(f"unable to detect text language")
+        raise ValueError("unable to detect text language")
 
     return complete(REWRITE_PROMP.format(language=language, tone=tone.value), text)
 

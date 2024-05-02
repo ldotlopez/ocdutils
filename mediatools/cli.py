@@ -35,13 +35,20 @@ from . import (
 )
 from .lib import log
 
-# from .similarity import imagehashcmp
+log.infect(config={"*": "WARNING"})
 
-log.infect()
+
+def logging_options(fn):
+    fn = click.option("-v", "verbose", count=True, help="Increase log level")(fn)
+    fn = click.option("-q", "quiet", count=True, help="Decrease log level")(fn)
+
+    return fn
 
 
 @click.group("multitool")
-def multitool():
+@logging_options
+def multitool(verbose: int = 0, quiet: int = 0):
+    log.setup_log_level(verbose=verbose, quiet=quiet)
     pass
 
 
@@ -50,7 +57,9 @@ multitool.add_command(sidecars.sidecars_cmd)
 
 
 @click.group("mediatool")
-def mediatool():
+@logging_options
+def mediatool(verbose: int = 0, quiet: int = 0):
+    log.setup_log_level(verbose=verbose, quiet=quiet)
     pass
 
 
@@ -63,7 +72,9 @@ mediatool.add_command(motionphotos.motionphoto_cmd)
 
 
 @click.group("glados")
-def glados():
+@logging_options
+def glados(verbose: int = 0, quiet: int = 0):
+    log.setup_log_level(verbose=verbose, quiet=quiet)
     pass
 
 
@@ -73,7 +84,10 @@ glados.add_command(imgdescribe.describe_cmd)
 
 
 @click.group()
-def main():
+@logging_options
+def main(quiet: int = 0, verbose: int = 0):
+    # Whop, don't handle log level here. It can end duplicated
+    # log.setup_log_level(quiet=quiet, verbose=verbose)
     pass
 
 
