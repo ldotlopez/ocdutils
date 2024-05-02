@@ -40,12 +40,13 @@ if shutil.which("ffmpeg") is None:
 
 LOGGER = logging.getLogger(__name__)
 
+
 OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
 
 
 OPENAI_VISION_MODEL: str = os.environ.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
 OPENAI_VISION_PROMPT: str = os.environ.get(
-    "OPENAI_VISION_PROMPT", "What’s in this image?"
+    "OPENAI_VISION_PROMPT", "What is in the image?"
 )
 OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
     "OPENAI_TRANSCRIPTION_MODEL", "whisper-1"
@@ -55,15 +56,18 @@ OPENAI_TRANSCRIPTION_LANGUAGE: str = os.environ.get("OPENAI_TRANSCRIPTION_LANGUA
 
 MAX_IMAGE_SIZE: int = int(os.environ.get("MEDIATOOLS_DESCRIBE_IMAGE_MAX_SIZE", "1024"))
 
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
+
 
 class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
     @contextlib.contextmanager
     def custom_api(self):
         kwargs = {}
-        if API_BASE:
-            kwargs["base_url"] = API_BASE
-        if API_KEY:
-            kwargs["api_key"] = API_KEY
+        if OPENAI_BASE_URL:
+            kwargs["base_url"] = OPENAI_BASE_URL
+        if OPENAI_API_KEY:
+            kwargs["api_key"] = OPENAI_API_KEY
 
         yield openai.OpenAI(**kwargs)
 
@@ -99,11 +103,11 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
                 img.save(bs, format="PNG")
                 rawimg = bs.getvalue()
 
-                LOGGER.info(f"image resized to {new_size!r}")
+                LOGGER.debug(f"{file}: image resized to {new_size!r}")
 
         with self.custom_api() as client:
             b64img = base64.b64encode(rawimg).decode("utf-8")
-            LOGGER.info(f"Asking '{model}' to describe image with '{prompt}'")
+            LOGGER.info(f"{file} model='{model}', prompt='{prompt}'")
 
             response = client.chat.completions.create(
                 model=model,
@@ -119,14 +123,20 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
                                 },
                             },
                         ],
+                        "temperature": 0.9,
                     }
                 ],
-                max_tokens=300,
             )
 
             return cast(str, response.choices[0].message.content or "").strip()
 
-    def transcribe(self, file: Path, *, model: str = OPENAI_TRANSCRIPTION_MODEL, language: str = OPENAI_TRANSCRIPTION_LANGUAGE) -> Transcription:  # type: ignore[override]
+    def transcribe(  # type: ignore[override]
+        self,
+        file: Path,
+        *,
+        model: str = OPENAI_TRANSCRIPTION_MODEL,
+        language: str = OPENAI_TRANSCRIPTION_LANGUAGE,
+    ) -> Transcription:
         with fs.temp_dirpath() as tmpd:
             audio = tmpd / "transcribe.m4a"
             (
