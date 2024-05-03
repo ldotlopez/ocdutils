@@ -7,15 +7,17 @@
 			[
 				"*.egg-info",
 				".mypy_cache",
+				".venv",
 				"__pycache__",
 				"build",
 				"dist",
+
 			],
 			"file_exclude_patterns":[
 				"*.lock",
 				"*.pyc",
-				".gitignore",
-			],"follow_symlinks": true
+			],
+			"follow_symlinks": true
 		}
 	],
 

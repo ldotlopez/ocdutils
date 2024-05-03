@@ -38,6 +38,7 @@ target-version = ['py311']
 [tool.isort]
 profile = "black"
 
+
 [project.scripts]
 mediatool = "mediatools.cli:mediatool"
 multitool = "mediatools.cli:multitool"
