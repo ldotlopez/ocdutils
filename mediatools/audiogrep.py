@@ -21,18 +21,14 @@
 import fnmatch
 import hashlib
 import logging
-import sys
 from collections.abc import Iterable
 from pathlib import Path
 
 import appdirs
 import click
 
-from .audiotranscribe import Transcription
+from .audiotranscribe import AudioTranscription, JSONFmt, SrtFmt, SrtTimeFmt, transcribe
 from .lib import filesystem as fs
-
-# from .texttransform import (JSONFmt, SrtFmt, SrtTimeFmt, Transcription,
-#                             transcribe)
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -68,7 +64,7 @@ def grep(
         transcription = SrtFmt.loads(srtfile.read_text())
 
     else:
-        LOGGER.debug(f"transcription not found in cache or not updated")
+        LOGGER.debug(f"transcription not found in cache ('{cachefile}') or not updated")
         transcription = transcribe(file, backend=transcribe_backend)
         cachefile.parent.mkdir(exist_ok=True, parents=True)
         cachefile.write_text(JSONFmt.dumps(transcription))
@@ -76,7 +72,7 @@ def grep(
     yield from _grep(pattern, transcription)
 
 
-def _grep(pattern: str, transcription: Transcription) -> Iterable[tuple[int, str]]:
+def _grep(pattern: str, transcription: AudioTranscription) -> Iterable[tuple[int, str]]:
     pattern = f"*{pattern}*"
     for s in transcription.segments:
         if fnmatch.fnmatch(s.text, pattern):

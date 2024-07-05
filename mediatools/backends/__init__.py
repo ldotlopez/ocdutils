@@ -30,13 +30,17 @@ from typing import Any
 LOGGER = logging.getLogger(__name__)
 
 
-def BaseBackendFactory(*, id: str, map: dict[str, str], default: str) -> type:
-    envvar = f"MEDIATOOLS_{id}_BACKEND"
-    backend_name = os.environ.get(envvar) or default
-    cls_name = map[backend_name]
+def BaseBackendFactory(
+    backend=None, *, id: str, map: dict[str, str], default: str
+) -> type:
+    if backend is None:
+        envvar = f"MEDIATOOLS_{id}_BACKEND"
+        backend = os.environ.get(envvar) or default
+
+    cls_name = map[backend]
 
     try:
-        m = importlib.import_module(f"..backends.{backend_name}", package=__package__)
+        m = importlib.import_module(f"..backends.{backend}", package=__package__)
     except ImportError as e:
         raise BackendError() from e
 
@@ -48,34 +52,6 @@ def BaseBackendFactory(*, id: str, map: dict[str, str], default: str) -> type:
 
 class BackendError(Exception):
     pass
-
-
-def get_backend_name(sub_module_name: str, *, default: str) -> str:
-    return os.environ.get(f"MEDIATOOLS_{id}_BACKEND", default)
-
-
-def get_backend_from_map(name: str, m: dict[str, str]) -> type:
-    return get_backend(name, m[name])
-
-
-def get_backend(name: str, clsname: str) -> type:
-    try:
-        m = importlib.import_module(f"..backends.{name}", package=__package__)
-    except ImportError as e:
-        raise BackendError() from e
-
-    if not hasattr(m, clsname):
-        raise BackendError()
-
-    return getattr(m, clsname)
-
-
-def get_backend_plus(name: str, cls: str) -> type | None:
-    try:
-        return get_backend(name, cls)
-    except BackendError as e:
-        LOGGER.critical(f"Unable to load backend '{name}'")
-        return None
 
 
 class TextCompletion:
@@ -101,21 +77,21 @@ class ImageDescriptor:
 #
 
 
-class Transcriptor:
+class AudioTranscriptor:
     @abstractmethod
-    def transcribe(self, file: Path, **kwargs) -> Transcription:
+    def transcribe(self, file: Path, **kwargs) -> AudioTranscription:
         ...
 
 
 @dataclasses.dataclass
-class Transcription:
+class AudioTranscription:
     text: str
-    segments: list[Segment] = dataclasses.field(default_factory=lambda: [])
+    segments: list[AudioSegment] = dataclasses.field(default_factory=lambda: [])
     language: str | None = None
 
 
 @dataclasses.dataclass
-class Segment:
+class AudioSegment:
     start: int
     end: int
     text: str

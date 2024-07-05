@@ -24,20 +24,25 @@ import dataclasses
 import io
 import json
 import logging
-import os
 from pathlib import Path
 
 import click
 import pysrt
 
-from .backends import Segment, Transcription, Transcriptor, get_backend_from_map
+from .backends import (
+    AudioSegment,
+    AudioTranscription,
+    AudioTranscriptor,
+    BaseBackendFactory,
+)
 from .lib import filesystem as fs
 
 LOGGER = logging.getLogger(__name__)
 
 
+ENVIRON_KEY = "AUDIO_TRANSCRIPTOR"
 DEFAULT_BACKEND = "openai"
-BACKEND_MAP = {
+BACKENDS = {
     "openai": "OpenAI",
     "whisper": "WhisperPy",
     "whispercpp": "WhisperCpp",
@@ -56,19 +61,19 @@ class SrtTimeFmt:
 
 class JSONFmt:
     @staticmethod
-    def loads(text: str) -> Transcription:
+    def loads(text: str) -> AudioTranscription:
         data = json.loads(text)
-        return Transcription(
+        return AudioTranscription(
             text=data["text"],
             segments=[
-                Segment(start=s["start"], end=s["end"], text=s["text"])
+                AudioSegment(start=s["start"], end=s["end"], text=s["text"])
                 for s in data.get("segments", [])
             ],
             language=data.get("language", None),
         )
 
     @staticmethod
-    def dumps(transcription: Transcription) -> str:
+    def dumps(transcription: AudioTranscription) -> str:
         if transcription.segments is None:
             segments = None
         else:
@@ -85,17 +90,18 @@ class JSONFmt:
 
 class SrtFmt:
     @staticmethod
-    def loads(text) -> Transcription:
+    def loads(text) -> AudioTranscription:
         sub = pysrt.from_string(text)
         segments = [
-            Segment(start=x.start.ordinal, end=x.end.ordinal, text=x.text) for x in sub
+            AudioSegment(start=x.start.ordinal, end=x.end.ordinal, text=x.text)
+            for x in sub
         ]
         text = "".join([x.text for x in sub]).strip()
 
-        return Transcription(text=text, segments=segments)
+        return AudioTranscription(text=text, segments=segments)
 
     @staticmethod
-    def dumps(transcription: Transcription) -> str:
+    def dumps(transcription: AudioTranscription) -> str:
         srt = pysrt.SubRipFile(
             items=[
                 pysrt.SubRipItem(
@@ -116,21 +122,16 @@ class SrtFmt:
         return ret
 
 
-def TranscriptorFactory(
-    backend: str | None = DEFAULT_BACKEND, **kwargs
-) -> Transcriptor:
-    Transcriptor = get_backend_from_map(
-        os.environ.get("MEDIATOOLS_TRANSCRIBE_BACKEND", backend or DEFAULT_BACKEND),
-        BACKEND_MAP,
-    )
-
-    return Transcriptor()
+def AudioTranscriptorFactory(backend: str | None = None, **kwargs) -> AudioTranscriptor:
+    return BaseBackendFactory(
+        backend=backend, id=ENVIRON_KEY, map=BACKENDS, default=DEFAULT_BACKEND
+    )(**kwargs)
 
 
 def transcribe(
     file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs
-) -> Transcription:
-    return TranscriptorFactory(backend=backend).transcribe(file, **kwargs)
+) -> AudioTranscription:
+    return AudioTranscriptorFactory(backend=backend).transcribe(file, **kwargs)
 
 
 @click.command("transcribe")
@@ -142,7 +143,7 @@ def transcribe_cmd(
     overwrite: bool = False,
     recursive: bool = False,
 ):
-    tr = TranscriptorFactory()
+    tr = AudioTranscriptorFactory()
 
     for file in fs.iter_files_in_targets(
         targets, recursive=recursive, error_handler=lambda x: click.echo(x, err=True)

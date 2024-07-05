@@ -26,10 +26,11 @@ import click
 import iso639
 import langdetect
 
-from .backends import TextCompletion, get_backend_from_map
+from .backends import BaseBackendFactory, TextCompletion
 
-BACKEND_MAP = {"openai": "OpenAI"}
+ENVIRON_KEY = "TEXT_TRANSFORMATOR"
 DEFAULT_BACKEND = "openai"
+BACKENDS = {"openai": "OpenAI"}
 
 
 class Tones(enum.Enum):
@@ -50,15 +51,10 @@ Use the {language} language.
 """
 
 
-def TextCompletionFactory(
-    backend: str | None = DEFAULT_BACKEND, **kwargs
-) -> TextCompletion:
-    Completion = get_backend_from_map(
-        os.environ.get("MEDIATOOLS_COMPLETION_BACKEND", backend or DEFAULT_BACKEND),
-        BACKEND_MAP,
-    )
-
-    return Completion()
+def TextCompletionFactory(backend: str | None = None, **kwargs) -> TextCompletion:
+    return BaseBackendFactory(
+        backend=backend, id=ENVIRON_KEY, map=BACKENDS, default=DEFAULT_BACKEND
+    )(**kwargs)
 
 
 def complete(

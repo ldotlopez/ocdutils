@@ -19,27 +19,25 @@
 
 
 import logging
-import os
 from pathlib import Path
 
 import click
 
-from .backends import ImageDescriptor, get_backend_from_map
+from .backends import BaseBackendFactory, ImageDescriptor
 from .lib import filesystem as fs
 from .lib import spawn
 
 LOGGER = logging.getLogger(__name__)
+
+ENVIRON_KEY = "IMAGE_DESCRIPTOR"
 DEFAULT_BACKEND = "openai"
-BACKEND_MAP = {"openai": "OpenAI", "lavis": "LAVIS"}
+BACKENDS = {"openai": "OpenAI", "lavis": "LAVIS"}
 
 
-def ImageDescriptorFactory(backend: str = DEFAULT_BACKEND, **kwargs) -> ImageDescriptor:
-    Descriptor = get_backend_from_map(
-        os.environ.get("MEDIATOOLS_DESCRIBE_BACKEND", backend or DEFAULT_BACKEND),
-        BACKEND_MAP,
-    )
-
-    return Descriptor()
+def ImageDescriptorFactory(backend: str | None = None, **kwargs) -> ImageDescriptor:
+    return BaseBackendFactory(
+        backend=backend, id=ENVIRON_KEY, map=BACKENDS, default=DEFAULT_BACKEND
+    )(**kwargs)
 
 
 def describe(file: Path, *, backend: str = DEFAULT_BACKEND, **kwargs) -> str:

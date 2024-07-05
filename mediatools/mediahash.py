@@ -19,18 +19,12 @@
 
 
 import logging
-import os
-from collections.abc import Iterable
 from pathlib import Path
 
 import click
-import imagehash
-import PIL
 
-from .backends import ImageDuplicateFinder, get_backend_from_map, get_backend_name
-from .backends.averagehash import ImageDuplicateFinder
+from .backends import ImageDuplicateFinder
 from .lib import filesystem as fs
-from .lib import spawn
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_HASH_SIZE = 8

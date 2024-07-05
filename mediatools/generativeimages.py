@@ -27,15 +27,16 @@ import click
 from .backends import BaseBackendFactory, ImageGenerator
 
 LOGGER = logging.getLogger(__name__)
+
+ENVIRON_KEY = "IMAGE_GENERATOR"
 DEFAULT_BACKEND = "openai"
-BACKEND_MAP = {"openai": "OpenAI"}
+BACKENDS = {"openai": "OpenAI"}
 
 
-def ImageGeneratorFactory(**kwargs) -> ImageGenerator:
-    envdef = "IMAGE_GENERATOR"
-    return BaseBackendFactory(id=envdef, map=BACKEND_MAP, default=DEFAULT_BACKEND)(
-        **kwargs
-    )
+def ImageGeneratorFactory(backend: str | None = None, **kwargs) -> ImageGenerator:
+    return BaseBackendFactory(
+        backend=backend, id=ENVIRON_KEY, map=BACKENDS, default=DEFAULT_BACKEND
+    )(**kwargs)
 
 
 @click.command("create-image")
