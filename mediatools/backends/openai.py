@@ -32,7 +32,14 @@ import openai
 from PIL import Image
 
 from ..lib import filesystem as fs
-from . import ImageDescriptor, Segment, TextCompletion, Transcription, Transcriptor
+from . import (
+    ImageDescriptor,
+    ImageGenerator,
+    Segment,
+    TextCompletion,
+    Transcription,
+    Transcriptor,
+)
 
 if shutil.which("ffmpeg") is None:
     raise SystemError("ffmpeg not in PATH")
@@ -60,7 +67,7 @@ OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 
 
-class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
+class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
     @contextlib.contextmanager
     def custom_api(self):
         kwargs = {}
@@ -83,6 +90,16 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
             resp = client.chat.completions.create(model=model, messages=messages)
 
         return resp.choices[0].message.content.strip()
+
+    def generate(self, prompt: str) -> bytes:
+        with self.custom_api() as client:
+            response = client.images.generate(
+                prompt=prompt,
+                response_format="base64_json",
+                n=1,
+            )
+
+            return base64.b64decode(response.data[0].base64_json)
 
     def describe(  # type: ignore[override]
         self,

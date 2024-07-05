@@ -30,6 +30,22 @@ from typing import Any
 LOGGER = logging.getLogger(__name__)
 
 
+def BaseBackendFactory(*, id: str, map: dict[str, str], default: str) -> type:
+    envvar = f"MEDIATOOLS_{id}_BACKEND"
+    backend_name = os.environ.get(envvar) or default
+    cls_name = map[backend_name]
+
+    try:
+        m = importlib.import_module(f"..backends.{backend_name}", package=__package__)
+    except ImportError as e:
+        raise BackendError() from e
+
+    if not hasattr(m, cls_name):
+        raise BackendError()
+
+    return getattr(m, cls_name)
+
+
 class BackendError(Exception):
     pass
 
@@ -111,6 +127,12 @@ class Segment:
 class ImageDuplicateFinder:
     @abstractmethod
     def find(self, images: list[Path], **kwargs):
+        ...
+
+
+class ImageGenerator:
+    @abstractmethod
+    def generate(self, prompt: str) -> bytes:
         ...
 
 
