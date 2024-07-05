@@ -24,41 +24,82 @@ from pathlib import Path
 
 import click
 
-from .backends import BaseBackendFactory, ImageGenerator
+from .backends import BaseBackendFactory, ImageDescriptor, ImageGenerator
+from .lib import filesystem as fs
+from .lib import spawn
 
 LOGGER = logging.getLogger(__name__)
 
-ENVIRON_KEY = "IMAGE_GENERATOR"
-DEFAULT_BACKEND = "openai"
-BACKENDS = {"openai": "OpenAI"}
-
 
 def ImageGeneratorFactory(backend: str | None = None, **kwargs) -> ImageGenerator:
+    env_id = "IMAGE_GENERATOR"
+    backends = {"openai": "OpenAI"}
+    default = "openai"
+
     return BaseBackendFactory(
-        backend=backend, id=ENVIRON_KEY, map=BACKENDS, default=DEFAULT_BACKEND
+        backend=backend, id=env_id, map=backends, default=default
     )(**kwargs)
+
+
+def ImageDescriptorFactory(backend: str | None = None, **kwargs) -> ImageDescriptor:
+    env_id = "IMAGE_DESCRIPTOR"
+    backends = {"openai": "OpenAI"}
+    default = "openai"
+
+    return BaseBackendFactory(
+        backend=backend, id=env_id, map=backends, default=default
+    )(**kwargs)
+
+
+def generate(prompt: str) -> bytes:
+    return ImageGeneratorFactory().generate(prompt)
+
+
+def describe(file: Path) -> str:
+    return ImageDescriptorFactory().describe(file)
+
+
+def write_comment(file: Path, comment: str):
+    with fs.temp_dirpath() as d:
+        temp = fs.safe_cp(file, d / file.name)
+
+        cmdl = ["exiftool", f"-Comment={comment}", temp.as_posix()]
+        try:
+            spawn.run(cmdl)
+
+        except spawn.ProcessFailure as e:
+            pass
+
+        fs.clone_exif(file, temp)
+        fs.clone_stat(file, temp)
+
+        fs.safe_mv(temp, file, overwrite=True)
 
 
 @click.command("create-image")
 @click.option("--output", "-o", type=Path, default=None, help="Output filename")
 @click.argument("prompt", type=str)
-def create_image_cmd(prompt: str, output: Path | None = None) -> int:
+def generate_cmd(prompt: str, output: Path | None = None) -> int:
     if output is None:
         ts = datetime.now(tz=UTC).timestamp()
         output = Path(f"{ts}.png")
 
-    backend = ImageGeneratorFactory()
-
-    buff = backend.generate(prompt)
+    buff = generate(prompt)
     output.write_bytes(buff)
+
     return 0
 
 
-def main(*args) -> int:
-    return create_image_cmd(*args) or 0
+@click.command("describe-image")
+@click.option(
+    "--write", "-w", is_flag=True, default=False, help="Write description into file"
+)
+@click.argument("file", type=Path, nargs=-1)
+def describe_cmd(file: tuple[Path], write: bool = False) -> int:
+    for f in file:
+        desc = describe(f)
+        print(f"{f}: {desc}")
+        if write:
+            write_comment(f, desc)
 
-
-if __name__ == "__main__":
-    import sys
-
-    sys.exit(main(*sys.argv))
+    return 0

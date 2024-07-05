@@ -33,12 +33,11 @@ from PIL import Image
 
 from ..lib import filesystem as fs
 from . import (
+    AudioTranscription,
+    AudioTranscriptor,
     ImageDescriptor,
     ImageGenerator,
-    Segment,
     TextCompletion,
-    Transcription,
-    Transcriptor,
 )
 
 if shutil.which("ffmpeg") is None:
@@ -67,7 +66,7 @@ OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 
 
-class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
+class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, AudioTranscriptor):
     @contextlib.contextmanager
     def custom_api(self):
         kwargs = {}
@@ -153,7 +152,7 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
         *,
         model: str = OPENAI_TRANSCRIPTION_MODEL,
         language: str = OPENAI_TRANSCRIPTION_LANGUAGE,
-    ) -> Transcription:
+    ) -> AudioTranscription:
         with fs.temp_dirpath() as tmpd:
             audio = tmpd / "transcribe.m4a"
             (
@@ -171,7 +170,7 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
                     response_format="verbose_json",
                 )
 
-            return Transcription(
+            return AudioTranscription(
                 text=resp.text.strip(),
                 segments=[
                     Segment(

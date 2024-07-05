@@ -27,7 +27,6 @@ from . import (
     filesystemfixes,
     formats,
     generativeimages,
-    imgdescribe,
     imgedit,
     mediahash,
     motionphotos,
@@ -81,8 +80,8 @@ def glados(verbose: int = 0, quiet: int = 0):
 
 glados.add_command(audiotranscribe.transcribe_cmd)
 glados.add_command(texttransform.rewrite_cmd)
-glados.add_command(imgdescribe.describe_cmd)
-glados.add_command(generativeimages.create_image_cmd)
+glados.add_command(generativeimages.generate_cmd)
+glados.add_command(generativeimages.describe_cmd)
 
 
 @click.group()
