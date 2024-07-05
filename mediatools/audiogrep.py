@@ -46,9 +46,7 @@ def _checksum(fh) -> str:
     return m.hexdigest()
 
 
-def grep(
-    pattern: str, file: Path, transcribe_backend: str | None = None
-) -> Iterable[tuple[int, str]]:
+def grep(pattern: str, file: Path) -> Iterable[tuple[int, str]]:
     with open(file, mode="rb") as fh:
         cs = _checksum(fh)
 
@@ -65,7 +63,7 @@ def grep(
 
     else:
         LOGGER.debug(f"transcription not found in cache ('{cachefile}') or not updated")
-        transcription = transcribe(file, backend=transcribe_backend)
+        transcription = transcribe(file)
         cachefile.parent.mkdir(exist_ok=True, parents=True)
         cachefile.write_text(JSONFmt.dumps(transcription))
 
@@ -80,7 +78,6 @@ def _grep(pattern: str, transcription: AudioTranscription) -> Iterable[tuple[int
 
 
 @click.command("agrep")
-@click.option("--transcribe-backend")
 @click.option("--recursive", "-r", is_flag=True, default=False)
 @click.argument("pattern", type=str)
 @click.argument("files", type=Path, nargs=-1, required=True)
@@ -88,10 +85,9 @@ def audiogrep_cmd(
     pattern: str,
     files: list[Path],
     recursive: bool,
-    transcribe_backend: str | None = None,
 ):
     for file in fs.iter_files_in_targets(files, recursive=recursive):
-        for ms, text in grep(pattern, file, transcribe_backend=transcribe_backend):
+        for ms, text in grep(pattern, file):
             msstr = SrtTimeFmt.int_to_str(ms)
             print(f"{file} @ {msstr}: {text}")
 
