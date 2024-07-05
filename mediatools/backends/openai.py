@@ -95,7 +95,7 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
         with self.custom_api() as client:
             response = client.images.generate(
                 prompt=prompt,
-                response_format="base64_json",
+                response_format="b64_json",
                 n=1,
             )
 
