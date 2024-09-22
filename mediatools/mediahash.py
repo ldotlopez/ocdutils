@@ -58,7 +58,12 @@ def media_hash_cmd(
 
     hasher = ImageDuplicateFinder(hash_size=hash_size)
     for f in g:
-        signature = hasher.hash(f)
+        try:
+            signature = hasher.hash(f)
+        except OSError as exc:
+            print(f"{f}: error ({exc})", file=sys.stderr)
+            continue
+
         print(f"{signature}\t{f}")
         # def update_fn(img, imghash):
         #     if verbose:
