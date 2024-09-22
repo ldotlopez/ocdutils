@@ -25,6 +25,7 @@ import io
 import json
 import logging
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -145,23 +146,28 @@ def transcribe_cmd(
 ):
     tr = TranscriptorFactory()
 
-    for file in fs.iter_files_in_targets(
+    for audiofp in fs.iter_files_in_targets(
         targets, recursive=recursive, error_handler=lambda x: click.echo(x, err=True)
     ):
-        mime = fs.file_mime(file)
+        strfp = fs.change_file_extension(audiofp, "srt")
+        if strfp.exists() and not overwrite:
+            click.echo(f"{strfp}: already exists")
+            continue
+
+        mime = fs.file_mime(audiofp)
         if not mime.startswith("video/") and not mime.startswith("audio/"):
-            click.echo(f"{file}: not a media file", err=True)
+            click.echo(f"{audiofp}: not a media file", err=True)
             continue
 
-        dest = fs.change_file_extension(file, "srt")
-        if dest.exists() and not overwrite:
-            click.echo(f"{dest}: already exists")
-            continue
+        txtbuff = tr.transcribe(audiofp)
+        srtbuff = SrtFmt.dumps(txtbuff)
 
-        transcription = tr.transcribe(file)
-        tr_srt = SrtFmt.dumps(transcription)
+        temp = fs.temp_filename(strfp)
+        temp.write_text(srtbuff)
 
-        dest.write_text(tr_srt)
+        fs.clone_stat(audiofp, temp)
+
+        shutil.move(temp, strfp)
 
 
 def main(*args) -> int:

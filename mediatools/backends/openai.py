@@ -143,6 +143,7 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
                 ffmpeg.input(file.as_posix())
                 .audio.output(audio.as_posix(), format="mp4")
                 .overwrite_output()
+                .global_args("-hide_banner", "-loglevel", "warning")
                 .run()
             )
 
