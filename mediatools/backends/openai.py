@@ -40,6 +40,9 @@ if shutil.which("ffmpeg") is None:
 
 LOGGER = logging.getLogger(__name__)
 
+OPENAI_EMBEDDINGS_MODEL = os.environ.get(
+    "OPENAI_EMBEDDINGS_MODEL", "text-embedding-ada-002"
+)
 
 OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
 
@@ -166,3 +169,19 @@ class OpenAI(TextCompletion, ImageDescriptor, Transcriptor):
                     for x in resp.segments or []
                 ],
             )
+
+    def embeddings(self, text: str):
+        with self.custom_api() as client:
+            try:
+                response = client.embeddings.create(
+                    input=text,
+                    model=OPENAI_EMBEDDINGS_MODEL,  # You can choose a different model if needed
+                )
+
+                # Extract the embeddings from the response
+                embeddings = response["data"][0]["embedding"]
+                return embeddings
+
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                return None
