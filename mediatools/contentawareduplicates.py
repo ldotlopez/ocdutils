@@ -19,40 +19,33 @@
 
 
 import logging
-import os
-from collections.abc import Iterable
 from pathlib import Path
 
 import click
-import imagehash
-import PIL
 
-from .backends import ImageDuplicateFinder, get_backend_from_map, get_backend_name
+from .backends import BaseBackendFactory, ImageDuplicateFinder
 from .lib import filesystem as fs
 from .lib import spawn
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_HASH_SIZE = 8
 
-DEFAULT_BACKEND = get_backend_name("CONTENT_AWARE_DUPLICATES", default="averagehash")
-BACKEND_MAP = {"averagehash": "ImageDuplicateFinder", "cv2histogram": "CV2Matcher"}
 
-DEFAULT_BACKEND = os.environ.get(
-    "MEDIATOOLS_CONTENT_AWARE_DUPLICATES_BACKEND", "averagehash"
-)
+ENVIRON_KEY = "CONTENT_AWARE_DUPLICATES"
+DEFAULT_BACKEND = "averagehash"
+BACKENDS = {"averagehash": "ImageDuplicateFinder", "cv2histogram": "CV2Matcher"}
 
 
 def ImageDuplicateFinderFactory(
-    backend: str | None = DEFAULT_BACKEND, **kwargs
+    backend: str | None = None, **kwargs
 ) -> ImageDuplicateFinder:
-    Cls = get_backend_from_map(backend or DEFAULT_BACKEND, BACKEND_MAP)
-    return Cls(**kwargs)
+    return BaseBackendFactory(
+        backend=backend, id=ENVIRON_KEY, map=BACKENDS, default=DEFAULT_BACKEND
+    )(**kwargs)
 
 
-def find_duplicates(
-    images: list[Path], *, backend: str | None = DEFAULT_BACKEND, **kwargs
-):
-    return ImageDuplicateFinderFactory(backend=backend, **kwargs).find(images)
+def find_duplicates(images: list[Path], **kwargs):
+    return ImageDuplicateFinderFactory(**kwargs).find(images)
 
 
 @click.command("find-duplicates")

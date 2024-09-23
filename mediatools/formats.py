@@ -189,6 +189,10 @@ formats_cmd.add_command(mp4ize_cmd)
 formats_cmd.add_command(jpgize_cmd)
 
 
+def run_command_and_return_stdout_else_raise_exception(cmdl: list[str]) -> str:
+    pass
+
+
 def main(*args) -> int:
     return formats_cmd(*args) or 0
 

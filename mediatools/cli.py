@@ -26,6 +26,7 @@ from . import (
     contentawareduplicates,
     filesystemfixes,
     formats,
+    generativeimages,
     imgdescribe,
     imgedit,
     mediahash,
@@ -81,6 +82,7 @@ def glados(verbose: int = 0, quiet: int = 0):
 glados.add_command(audiotranscribe.transcribe_cmd)
 glados.add_command(texttransform.rewrite_cmd)
 glados.add_command(imgdescribe.describe_cmd)
+glados.add_command(generativeimages.create_image_cmd)
 
 
 @click.group()
