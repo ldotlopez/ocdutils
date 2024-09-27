@@ -73,6 +73,19 @@ class ImageDescriptor:
 
 
 #
+# Embeddings
+#
+
+Embeddings = list[float]
+
+
+class EmbeddingsHandler:
+    @abstractmethod
+    def get_embeddings(self, text: str) -> Embeddings:
+        ...
+
+
+#
 # Transcriptions
 #
 

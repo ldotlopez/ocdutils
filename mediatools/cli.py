@@ -24,6 +24,7 @@ from . import (
     audiogrep,
     audiotranscribe,
     contentawareduplicates,
+    embeddings,
     filesystemfixes,
     formats,
     generativeimages,
@@ -80,6 +81,7 @@ def glados(verbose: int = 0, quiet: int = 0):
 
 
 glados.add_command(audiotranscribe.transcribe_cmd)
+glados.add_command(embeddings.embeddings_cmd)
 glados.add_command(texttransform.rewrite_cmd)
 glados.add_command(imgdescribe.describe_cmd)
 glados.add_command(generativeimages.create_image_cmd)

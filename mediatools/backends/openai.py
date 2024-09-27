@@ -33,12 +33,13 @@ from PIL import Image
 
 from ..lib import filesystem as fs
 from . import (
+    AudioSegment,
+    AudioTranscription,
+    AudioTranscriptor,
+    EmbeddingsHandler,
     ImageDescriptor,
     ImageGenerator,
-    Segment,
     TextCompletion,
-    Transcription,
-    Transcriptor,
 )
 
 if shutil.which("ffmpeg") is None:
@@ -47,30 +48,32 @@ if shutil.which("ffmpeg") is None:
 
 LOGGER = logging.getLogger(__name__)
 
-OPENAI_EMBEDDINGS_MODEL = os.environ.get(
-    "OPENAI_EMBEDDINGS_MODEL", "text-embedding-ada-002"
-)
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 
 OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
-
-
+OPENAI_EMBEDDINGS_MODEL = os.environ.get(
+    "OPENAI_EMBEDDINGS_MODEL", "mxbai-embed-large"  # "text-embedding-ada-002"
+)
+OPENAI_TRANSCRIPTION_LANGUAGE: str = os.environ.get("OPENAI_TRANSCRIPTION_LANGUAGE", "")
+OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
+    "OPENAI_TRANSCRIPTION_MODEL", "whisper-1"
+)
 OPENAI_VISION_MODEL: str = os.environ.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
 OPENAI_VISION_PROMPT: str = os.environ.get(
     "OPENAI_VISION_PROMPT", "What is in the image?"
 )
-OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
-    "OPENAI_TRANSCRIPTION_MODEL", "whisper-1"
-)
-OPENAI_TRANSCRIPTION_LANGUAGE: str = os.environ.get("OPENAI_TRANSCRIPTION_LANGUAGE", "")
-
 
 MAX_IMAGE_SIZE: int = int(os.environ.get("MEDIATOOLS_DESCRIBE_IMAGE_MAX_SIZE", "1024"))
 
-OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 
-
-class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
+class OpenAI(
+    TextCompletion,
+    ImageDescriptor,
+    ImageGenerator,
+    AudioTranscriptor,
+    EmbeddingsHandler,
+):
     @contextlib.contextmanager
     def custom_api(self):
         kwargs = {}
@@ -93,6 +96,11 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
             resp = client.chat.completions.create(model=model, messages=messages)
 
         return resp.choices[0].message.content.strip()
+
+    def get_embeddings(self, text: str) -> list[float]:
+        with self.custom_api() as client:
+            ret = client.embeddings.create(input=text, model=OPENAI_EMBEDDINGS_MODEL)
+            return ret.data[0].embedding
 
     def generate(self, prompt: str) -> bytes:
         with self.custom_api() as client:
@@ -156,7 +164,7 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
         *,
         model: str = OPENAI_TRANSCRIPTION_MODEL,
         language: str = OPENAI_TRANSCRIPTION_LANGUAGE,
-    ) -> Transcription:
+    ) -> AudioTranscription:
         with fs.temp_dirpath() as tmpd:
             audio = tmpd / "transcribe.m4a"
             (
@@ -175,10 +183,10 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, Transcriptor):
                     response_format="verbose_json",
                 )
 
-            return Transcription(
+            return AudioTranscription(
                 text=resp.text.strip(),
                 segments=[
-                    Segment(
+                    AudioSegment(
                         start=x["start"] // 1_000_000_000,
                         end=x["end"] // 1_000_000_000,
                         text=x["text"].strip(),
