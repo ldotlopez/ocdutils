@@ -49,6 +49,9 @@ I will provide a text and you will reply with an alternative version of the text
 {tone}.
 Use the {language} language.
 """
+TRANSLATE_PROMPT = """You are a translator.
+Translate the following text into {language}
+"""
 
 
 def TextCompletionFactory(backend: str | None = None, **kwargs) -> TextCompletion:
@@ -58,7 +61,7 @@ def TextCompletionFactory(backend: str | None = None, **kwargs) -> TextCompletio
 
 
 def complete(
-    system: str, text: str, *, backend: str | None = DEFAULT_BACKEND, **kwargs
+    text: str, *, system: str, backend: str | None = DEFAULT_BACKEND, **kwargs
 ) -> str:
     return TextCompletionFactory(backend=backend).complete(system, text, **kwargs)
 
@@ -69,7 +72,7 @@ def summarize(text: str, *, language: str | None = None) -> str:
     if language is None:
         raise ValueError("unable to detect text language")
 
-    return complete(SUMMARIZE_PROMPT.format(language=language), text)
+    return complete(text, system=SUMMARIZE_PROMPT.format(language=language))
 
 
 def rewrite(
@@ -81,7 +84,18 @@ def rewrite(
     if language is None:
         raise ValueError("unable to detect text language")
 
-    return complete(REWRITE_PROMP.format(language=language, tone=tone.value), text)
+    return complete(
+        text, system=REWRITE_PROMP.format(language=language, tone=tone.value)
+    )
+
+
+def translate(text: str, *, language: str | None = None) -> str:
+    language = language or detect_language(text)
+
+    if language is None:
+        raise ValueError("unable to detect text language")
+
+    return complete(text, system=TRANSLATE_PROMPT.format(language=language))
 
 
 def detect_language(text: str) -> str:
@@ -129,7 +143,7 @@ def rewrite_cmd(
         raise ValueError(file)
 
     try:
-        tone = tone = getattr(Tones, tone.upper())
+        tone = getattr(Tones, tone.upper())
     except AttributeError as e:
         raise ValueError(f"invalid tone: {tone}") from e
 
@@ -142,8 +156,23 @@ def text_transform_cmd():
     pass
 
 
-text_transform_cmd.add_command(summarize_cmd)
+@click.command("translate")
+@click.option(
+    "-l",
+    "--language",
+    help="Translate to",
+    type=str,
+)
+@click.option("-l", "--language", help="Override autodetected language", type=str)
+@click.argument("text", type=str)
+def translate_cmd(text: str, language: str):
+    summmary = translate(text, language=language)
+    click.echo(summmary)
+
+
 text_transform_cmd.add_command(rewrite_cmd)
+text_transform_cmd.add_command(summarize_cmd)
+text_transform_cmd.add_command(translate_cmd)
 
 
 def main(*args) -> int:
