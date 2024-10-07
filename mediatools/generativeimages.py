@@ -19,7 +19,6 @@
 
 
 import logging
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -53,11 +52,11 @@ def ImageDescriptorFactory(backend: str | None = None, **kwargs) -> ImageDescrip
 
 
 def generate(prompt: str) -> bytes:
-    return ImageGeneratorFactory().generate(prompt)
+    return ImageGeneratorFactory().generate_image(prompt)
 
 
 def describe(file: Path, *, prompt: str | None = None) -> str:
-    return ImageDescriptorFactory().describe(file, prompt=prompt)
+    return ImageDescriptorFactory().describe_image(file, prompt=prompt)
 
 
 def write_comment(file: Path, comment: str):

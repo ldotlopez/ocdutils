@@ -20,10 +20,13 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import importlib
 import logging
 import os
+import warnings
 from abc import abstractmethod
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -54,10 +57,26 @@ class BackendError(Exception):
     pass
 
 
+def deprecation(new_fn: Callable) -> Callable:
+    def decorator(fn: Callable):
+        @functools.wraps(fn)
+        def wrap(*args, **kwargs):
+            warnings.warn(f"{fn.__name__} is deprecated, use {new_fn.__name__}")
+            return fn(*args, **kwargs)
+
+        return wrap
+
+    return decorator
+
+
 class TextCompletion:
     @abstractmethod
-    def complete(self, system: str, text: str) -> str:
+    def complete_chat(self, text: str, *, system: str | None) -> str:
         ...
+
+    @deprecation(complete_chat)
+    def complete(self, text: str, *, system: str | None) -> str:  # type: ignore[empty-body]
+        pass
 
 
 #
@@ -65,8 +84,12 @@ class TextCompletion:
 #
 class ImageDescriptor:
     @abstractmethod
-    def describe(self, file: Path, **kwargs) -> str:
+    def describe_image(self, file: Path, **kwargs) -> str:
         ...
+
+    @deprecation(describe_image)
+    def describe(self, system: str, text: str) -> str:  # type: ignore[empty-body]
+        pass
 
 
 #
@@ -89,8 +112,12 @@ class EmbeddingsHandler:
 
 class AudioTranscriptor:
     @abstractmethod
-    def transcribe(self, file: Path, **kwargs) -> AudioTranscription:
+    def transcribe_audio(self, file: Path, **kwargs) -> AudioTranscription:
         ...
+
+    @deprecation(transcribe_audio)
+    def transcribe(self, system: str, text: str) -> str:  # type: ignore[empty-body]
+        pass
 
 
 @dataclasses.dataclass
@@ -118,8 +145,12 @@ class ImageDuplicateFinder:
 
 class ImageGenerator:
     @abstractmethod
-    def generate(self, prompt: str) -> bytes:
+    def generate_image(self, prompt: str) -> bytes:
         ...
+
+    @deprecation(generate_image)
+    def generate(self, system: str, text: str) -> str:  # type: ignore[empty-body]
+        pass
 
 
 class ImageGroup:

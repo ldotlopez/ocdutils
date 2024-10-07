@@ -84,16 +84,16 @@ class OpenAI(
 
         yield openai.OpenAI(**kwargs)
 
-    def chat_completion(
-        self, system: str, text: str, *, model: str = OPENAI_CHAT_MODEL
+    def complete_chat(
+        self, text: str, *, system: str | None, model: str = OPENAI_CHAT_MODEL
     ) -> str:
-        messages = [
-            {"role": "system", "content": system},
-            {"role": "user", "content": text},
-        ]
+        system_msg = [{"role": "system", "content": system}] if system else []
+        user_msg = [{"role": "user", "content": text}]
 
         with self.custom_api() as client:
-            resp = client.chat.completions.create(model=model, messages=messages)
+            resp = client.chat.completions.create(
+                model=model, messages=system_msg + user_msg
+            )
 
         return resp.choices[0].message.content.strip()
 
@@ -102,7 +102,7 @@ class OpenAI(
             ret = client.embeddings.create(input=text, model=OPENAI_EMBEDDINGS_MODEL)
             return ret.data[0].embedding
 
-    def generate(self, prompt: str) -> bytes:
+    def generate_image(self, prompt: str) -> bytes:
         with self.custom_api() as client:
             response = client.images.generate(
                 prompt=prompt,
@@ -112,7 +112,7 @@ class OpenAI(
 
             return base64.b64decode(response.data[0].base64_json)
 
-    def describe(  # type: ignore[override]
+    def describe_image(  # type: ignore[override]
         self,
         file: Path,
         *,
@@ -161,7 +161,7 @@ class OpenAI(
 
             return cast(str, response.choices[0].message.content or "").strip()
 
-    def transcribe(  # type: ignore[override]
+    def transcribe_audio(  # type: ignore[override]
         self,
         file: Path,
         *,

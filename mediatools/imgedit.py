@@ -87,7 +87,7 @@ def remove_transparency(img: Image.Image, bg_color=(255, 255, 255)) -> Image.Ima
 @click.argument("file", type=click.File(mode="rb"))
 def autocrop_cmd(file: click.File):
     path = Path(file.name)
-    with Image.open(file) as img:
+    with Image.open(path) as img:
         output_path = Path(f"{path.parent / path.stem}.cropped.png")
         out = autocrop(img)
         out.save(output_path)
@@ -100,7 +100,7 @@ def autocrop_cmd(file: click.File):
 def removebg_cmd(file: click.File):
     path = Path(file.name)
 
-    with Image.open(file) as img:
+    with Image.open(path) as img:
         out = autocrop(remove_background(img))
 
         output_path = Path(f"{path.parent / path.stem}.removebg{path.suffix}")

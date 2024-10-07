@@ -133,7 +133,7 @@ def AudioTranscriptorFactory(backend: str | None = None, **kwargs) -> AudioTrans
 def transcribe(
     file: Path, *, backend: str | None = DEFAULT_BACKEND, **kwargs
 ) -> AudioTranscription:
-    return AudioTranscriptorFactory(backend=backend).transcribe(file, **kwargs)
+    return AudioTranscriptorFactory(backend=backend).transcribe_audio(file, **kwargs)
 
 
 @click.command("transcribe")
@@ -160,7 +160,7 @@ def transcribe_cmd(
             click.echo(f"{audiofp}: not a media file", err=True)
             continue
 
-        txtbuff = tr.transcribe(audiofp)
+        txtbuff = tr.transcribe_audio(audiofp)
         srtbuff = SrtFmt.dumps(txtbuff)
 
         temp = fs.temp_filename(strfp)

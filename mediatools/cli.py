@@ -81,6 +81,7 @@ def glados(verbose: int = 0, quiet: int = 0):
 
 glados.add_command(audiotranscribe.transcribe_cmd)
 glados.add_command(embeddings.embeddings_cmd)
+glados.add_command(texttransform.emojize_cmd)
 glados.add_command(texttransform.rewrite_cmd)
 glados.add_command(texttransform.translate_cmd)
 glados.add_command(texttransform.summarize_cmd)

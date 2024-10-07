@@ -49,7 +49,7 @@ class WhisperPy(Transcriptor):
 
         return self._model
 
-    def transcribe(  # type: ignore[override]
+    def transcribe_audio(  # type: ignore[override]
         self,
         file: Path,
         *,

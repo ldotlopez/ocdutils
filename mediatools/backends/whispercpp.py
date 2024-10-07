@@ -67,7 +67,7 @@ class WhisperCpp(AudioTranscriptor):
 
         self.model_filepath = model_filepath
 
-    def transcribe(  # type: ignore[override]
+    def transcribe_audio(  # type: ignore[override]
         self,
         file: Path,
         *,

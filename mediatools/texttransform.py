@@ -19,7 +19,6 @@
 
 
 import enum
-import os
 import sys
 
 import click
@@ -32,26 +31,30 @@ ENVIRON_KEY = "TEXT_TRANSFORMATOR"
 DEFAULT_BACKEND = "openai"
 BACKENDS = {"openai": "OpenAI"}
 
+EMOJIZE_PROMPT = """You are an creative millenial.
+I will provide a text and you will reply with an emoji that summarizes the text, nothing more.
+"""
 
-class Tones(enum.Enum):
-    CASUAL = "Use a more casual tone"
-    FORMAL = "Use a more formal tone"
-    KEEP = "Keep the same tone"
-
+REWRITE_PROMPT = """You are a text rewriter.
+I will provide a text and you will reply with an alternative version of the text with similar length, nothing more.
+{tone}.
+Use the {language} language.
+"""
 
 SUMMARIZE_PROMPT = """You are a text summarize.
 I will provide a text and you will reply with a summmary of that text, and nothing more.
 Use the {language} language.
 """
 
-REWRITE_PROMP = """You are a text rewriter.
-I will provide a text and you will reply with an alternative version of the text with similar length, nothing more.
-{tone}.
-Use the {language} language.
+TRANSLATE_PROMPT = """You are an expert translator.
+I will provide a text and you will reply with the translation of that text in {language}, nothing more
 """
-TRANSLATE_PROMPT = """You are a translator.
-Translate the following text into {language}
-"""
+
+
+class Tones(enum.Enum):
+    CASUAL = "Use a more casual tone"
+    FORMAL = "Use a more formal tone"
+    KEEP = "Keep the same tone"
 
 
 def TextCompletionFactory(backend: str | None = None, **kwargs) -> TextCompletion:
@@ -60,19 +63,20 @@ def TextCompletionFactory(backend: str | None = None, **kwargs) -> TextCompletio
     )(**kwargs)
 
 
+def detect_language(text: str) -> str:
+    return iso639.to_name(langdetect.detect(text)).split(";")[0].strip().lower()
+
+
 def complete(
     text: str, *, system: str, backend: str | None = DEFAULT_BACKEND, **kwargs
 ) -> str:
-    return TextCompletionFactory(backend=backend).complete(system, text, **kwargs)
+    return TextCompletionFactory(backend=backend).complete_chat(
+        text, system=system, **kwargs
+    )
 
 
-def summarize(text: str, *, language: str | None = None) -> str:
-    language = language or detect_language(text)
-
-    if language is None:
-        raise ValueError("unable to detect text language")
-
-    return complete(text, system=SUMMARIZE_PROMPT.format(language=language))
+def emojize(text: str) -> str:
+    return complete(text, system=EMOJIZE_PROMPT)
 
 
 def rewrite(
@@ -85,35 +89,28 @@ def rewrite(
         raise ValueError("unable to detect text language")
 
     return complete(
-        text, system=REWRITE_PROMP.format(language=language, tone=tone.value)
+        text, system=REWRITE_PROMPT.format(language=language, tone=tone.value)
     )
 
 
-def translate(text: str, *, language: str | None = None) -> str:
+def summarize(text: str, *, language: str | None = None) -> str:
     language = language or detect_language(text)
 
     if language is None:
         raise ValueError("unable to detect text language")
 
+    return complete(text, system=SUMMARIZE_PROMPT.format(language=language))
+
+
+def translate(text: str, *, language: str) -> str:
     return complete(text, system=TRANSLATE_PROMPT.format(language=language))
 
 
-def detect_language(text: str) -> str:
-    return iso639.to_name(langdetect.detect(text)).split(";")[0].strip().lower()
-
-
-@click.command("summarize")
-@click.option("-l", "--language", help="Override autodetected language", type=str)
-@click.argument("file", type=str)
-def summarize_cmd(file: str | None = None, language: str | None = None):
-    if file == "-":
-        buff = sys.stdin.read()
-    else:
-        with open(file, encoding="utf-8") as fh:  # type: ignore[arg-type]
-            buff = fh.read()
-
-    summmary = summarize(buff, language=language)
-    click.echo(summmary)
+@click.command("emojize")
+@click.argument("text", type=str)
+def emojize_cmd(text: str):
+    emoji = emojize(text)
+    click.echo(emoji)
 
 
 @click.command("rewrite")
@@ -151,9 +148,18 @@ def rewrite_cmd(
     click.echo(summmary)
 
 
-@click.group("text-transform")
-def text_transform_cmd():
-    pass
+@click.command("summarize")
+@click.option("-l", "--language", help="Override autodetected language", type=str)
+@click.argument("file", type=str)
+def summarize_cmd(file: str | None = None, language: str | None = None):
+    if file == "-":
+        buff = sys.stdin.read()
+    else:
+        with open(file, encoding="utf-8") as fh:  # type: ignore[arg-type]
+            buff = fh.read()
+
+    summmary = summarize(buff, language=language)
+    click.echo(summmary)
 
 
 @click.command("translate")
@@ -170,6 +176,12 @@ def translate_cmd(text: str, language: str):
     click.echo(summmary)
 
 
+@click.group("text-transform")
+def text_transform_cmd():
+    pass
+
+
+text_transform_cmd.add_command(emojize_cmd)
 text_transform_cmd.add_command(rewrite_cmd)
 text_transform_cmd.add_command(summarize_cmd)
 text_transform_cmd.add_command(translate_cmd)
