@@ -18,8 +18,22 @@
 # USA.
 
 
+import hashlib
+import io
 import zlib
 from pathlib import Path
+
+
+def sha1_digest(fh: io.BufferedReader) -> str:
+    m = hashlib.sha1()
+
+    curr = fh.tell()
+    fh.seek(0)
+    while buff := fh.read():
+        m.update(buff)
+    fh.seek(curr)
+
+    return m.hexdigest()
 
 
 def crc32_hash_frombytes(data: bytes):

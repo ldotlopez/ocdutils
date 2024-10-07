@@ -21,13 +21,15 @@
 from __future__ import annotations
 
 import dataclasses
+import fnmatch
 import io
 import json
 import logging
 import shutil
-import sys
+from collections.abc import Iterable
 from pathlib import Path
 
+import appdirs
 import click
 import pysrt
 
@@ -38,8 +40,10 @@ from .backends import (
     BaseBackendFactory,
 )
 from .lib import filesystem as fs
+from .lib.hashing import sha1_digest
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 ENVIRON_KEY = "AUDIO_TRANSCRIPTOR"
@@ -136,6 +140,37 @@ def transcribe(
     return AudioTranscriptorFactory(backend=backend).transcribe_audio(file, **kwargs)
 
 
+def _grep(pattern: str, transcription: AudioTranscription) -> Iterable[tuple[int, str]]:
+    pattern = f"*{pattern}*"
+    for s in transcription.segments:
+        if fnmatch.fnmatch(s.text, pattern):
+            yield (s.start, s.text)
+
+
+def grep(pattern: str, file: Path) -> Iterable[tuple[int, str]]:
+    with open(file, mode="rb") as fh:
+        cs = sha1_digest(fh)
+
+    cachefile = Path(appdirs.user_cache_dir(f"transcriptions/{cs[0]}/{cs[0:2]}/{cs}"))
+    srtfile = fs.change_file_extension(file, "srt")
+
+    if cachefile.exists():
+        LOGGER.debug(f"transcription found in cache ({cachefile!s})")
+        transcription = JSONFmt.loads(cachefile.read_text())
+
+    elif srtfile.exists():
+        LOGGER.debug(f"transcription found in sidecar file ({srtfile!s})")
+        transcription = SrtFmt.loads(srtfile.read_text())
+
+    else:
+        LOGGER.debug(f"transcription not found in cache ('{cachefile}') or not updated")
+        transcription = transcribe(file)
+        cachefile.parent.mkdir(exist_ok=True, parents=True)
+        cachefile.write_text(JSONFmt.dumps(transcription))
+
+    yield from _grep(pattern, transcription)
+
+
 @click.command("transcribe")
 @click.option("--recursive", "-r", is_flag=True, default=False)
 @click.option("--overwrite", "-f", is_flag=True, default=False)
@@ -171,11 +206,16 @@ def transcribe_cmd(
         shutil.move(temp, strfp)
 
 
-def main(*args) -> int:
-    return transcribe_cmd(*args) or 0
-
-
-if __name__ == "__main__":
-    import sys
-
-    sys.exit(main(*sys.argv))
+@click.command("agrep")
+@click.option("--recursive", "-r", is_flag=True, default=False)
+@click.argument("pattern", type=str)
+@click.argument("files", type=Path, nargs=-1, required=True)
+def audiogrep_cmd(
+    pattern: str,
+    files: list[Path],
+    recursive: bool,
+):
+    for file in fs.iter_files_in_targets(files, recursive=recursive):
+        for ms, text in grep(pattern, file):
+            msstr = SrtTimeFmt.int_to_str(ms)
+            print(f"{file} @ {msstr}: {text}")

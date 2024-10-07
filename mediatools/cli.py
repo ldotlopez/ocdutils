@@ -21,8 +21,7 @@
 import click
 
 from . import (
-    audiogrep,
-    audiotranscribe,
+    audio,
     contentawareduplicates,
     embeddings,
     filesystemfixes,
@@ -64,10 +63,11 @@ def mediatool(verbose: int = 0, quiet: int = 0):
     pass
 
 
-mediatool.add_command(audiogrep.audiogrep_cmd)
-mediatool.add_command(imgedit.imgedit_cmd)
-mediatool.add_command(formats.formats_cmd)
+mediatool.add_command(audio.audiogrep_cmd)
+mediatool.add_command(audio.transcribe_cmd)
 mediatool.add_command(contentawareduplicates.find_duplicates_cmd)
+mediatool.add_command(formats.formats_cmd)
+mediatool.add_command(imgedit.imgedit_cmd)
 mediatool.add_command(mediahash.media_hash_cmd)
 mediatool.add_command(motionphotos.motionphoto_cmd)
 
@@ -79,7 +79,6 @@ def glados(verbose: int = 0, quiet: int = 0):
     pass
 
 
-glados.add_command(audiotranscribe.transcribe_cmd)
 glados.add_command(embeddings.embeddings_cmd)
 glados.add_command(texttransform.emojize_cmd)
 glados.add_command(texttransform.rewrite_cmd)
