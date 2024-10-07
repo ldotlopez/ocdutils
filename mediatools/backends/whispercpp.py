@@ -31,7 +31,7 @@ import pysrt
 
 from ..lib import filesystem as fs
 from ..lib import spawn
-from . import Segment, Transcription, Transcriptor
+from . import AudioSegment, AudioTranscription, AudioTranscriptor
 
 if shutil.which("ffmpeg") is None:
     raise SystemError("ffmpeg not in PATH")
@@ -53,7 +53,7 @@ def _model_name_to_path(name: str) -> Path:
     return Path(os.path.expanduser(f"~/.cache/whisper/{name}.pt"))
 
 
-class WhisperCpp(Transcriptor):
+class WhisperCpp(AudioTranscriptor):
     def __init__(
         self,
         model_filepath: Path
@@ -72,7 +72,7 @@ class WhisperCpp(Transcriptor):
         file: Path,
         *,
         language: str | None = os.environ.get("WHISPER_LANGUAGE", "auto"),
-    ) -> Transcription:
+    ) -> AudioTranscription:
         language = language or "auto"
         with fs.temp_dirpath_ctx() as tmpd:
             base = tmpd / "transcribe"
@@ -110,17 +110,18 @@ class WhisperCpp(Transcriptor):
 
 class SrtFmt:
     @staticmethod
-    def loads(text) -> Transcription:
+    def loads(text) -> AudioTranscription:
         sub = pysrt.from_string(text)
         segments = [
-            Segment(start=x.start.ordinal, end=x.end.ordinal, text=x.text) for x in sub
+            AudioSegment(start=x.start.ordinal, end=x.end.ordinal, text=x.text)
+            for x in sub
         ]
         text = "".join([x.text for x in sub]).strip()
 
-        return Transcription(text=text, segments=segments)
+        return AudioTranscription(text=text, segments=segments)
 
     @staticmethod
-    def dumps(transcription: Transcription) -> str:
+    def dumps(transcription: AudioTranscription) -> str:
         srt = pysrt.SubRipFile(
             items=[
                 pysrt.SubRipItem(
