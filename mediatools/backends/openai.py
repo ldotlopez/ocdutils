@@ -33,8 +33,10 @@ from PIL import Image
 
 from ..lib import filesystem as fs
 from . import (
+    AudioSegment,
     AudioTranscription,
     AudioTranscriptor,
+    EmbeddingsHandler,
     ImageDescriptor,
     ImageGenerator,
     TextCompletion,
@@ -46,27 +48,32 @@ if shutil.which("ffmpeg") is None:
 
 LOGGER = logging.getLogger(__name__)
 
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 
 OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
-
-
+OPENAI_EMBEDDINGS_MODEL = os.environ.get(
+    "OPENAI_EMBEDDINGS_MODEL", "mxbai-embed-large"  # "text-embedding-ada-002"
+)
+OPENAI_TRANSCRIPTION_LANGUAGE: str = os.environ.get("OPENAI_TRANSCRIPTION_LANGUAGE", "")
+OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
+    "OPENAI_TRANSCRIPTION_MODEL", "whisper-1"
+)
 OPENAI_VISION_MODEL: str = os.environ.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
 OPENAI_VISION_PROMPT: str = os.environ.get(
     "OPENAI_VISION_PROMPT", "What is in the image?"
 )
-OPENAI_TRANSCRIPTION_MODEL: str = os.environ.get(
-    "OPENAI_TRANSCRIPTION_MODEL", "whisper-1"
-)
-OPENAI_TRANSCRIPTION_LANGUAGE: str = os.environ.get("OPENAI_TRANSCRIPTION_LANGUAGE", "")
-
 
 MAX_IMAGE_SIZE: int = int(os.environ.get("MEDIATOOLS_DESCRIBE_IMAGE_MAX_SIZE", "1024"))
 
-OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 
-
-class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, AudioTranscriptor):
+class OpenAI(
+    TextCompletion,
+    ImageDescriptor,
+    ImageGenerator,
+    AudioTranscriptor,
+    EmbeddingsHandler,
+):
     @contextlib.contextmanager
     def custom_api(self):
         kwargs = {}
@@ -90,6 +97,11 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, AudioTranscriptor)
 
         return resp.choices[0].message.content.strip()
 
+    def get_embeddings(self, text: str) -> list[float]:
+        with self.custom_api() as client:
+            ret = client.embeddings.create(input=text, model=OPENAI_EMBEDDINGS_MODEL)
+            return ret.data[0].embedding
+
     def generate(self, prompt: str) -> bytes:
         with self.custom_api() as client:
             response = client.images.generate(
@@ -104,9 +116,12 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, AudioTranscriptor)
         self,
         file: Path,
         *,
-        model: str = OPENAI_VISION_MODEL,
-        prompt: str = OPENAI_VISION_PROMPT,
+        model: str | None = OPENAI_VISION_MODEL,
+        prompt: str | None = OPENAI_VISION_PROMPT,
     ) -> str:
+        model = model or OPENAI_VISION_MODEL
+        prompt = prompt or OPENAI_VISION_PROMPT
+
         rawimg = file.read_bytes()
 
         with Image.open(io.BytesIO(rawimg)) as img:
@@ -125,23 +140,23 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, AudioTranscriptor)
             b64img = base64.b64encode(rawimg).decode("utf-8")
             LOGGER.info(f"{file} model='{model}', prompt='{prompt}'")
 
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{b64img}"},
+                        },
+                    ],
+                }
+            ]
+
             response = client.chat.completions.create(
                 model=model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{b64img}"
-                                },
-                            },
-                        ],
-                        "temperature": 0.9,
-                    }
-                ],
+                messages=messages,
+                temperature=0.9,  # temperature": 0.9
             )
 
             return cast(str, response.choices[0].message.content or "").strip()
@@ -159,6 +174,7 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, AudioTranscriptor)
                 ffmpeg.input(file.as_posix())
                 .audio.output(audio.as_posix(), format="mp4")
                 .overwrite_output()
+                .global_args("-hide_banner", "-loglevel", "warning")
                 .run()
             )
 
@@ -173,7 +189,7 @@ class OpenAI(TextCompletion, ImageDescriptor, ImageGenerator, AudioTranscriptor)
             return AudioTranscription(
                 text=resp.text.strip(),
                 segments=[
-                    Segment(
+                    AudioSegment(
                         start=x["start"] // 1_000_000_000,
                         end=x["end"] // 1_000_000_000,
                         text=x["text"].strip(),

@@ -24,6 +24,7 @@ from . import (
     audiogrep,
     audiotranscribe,
     contentawareduplicates,
+    embeddings,
     filesystemfixes,
     formats,
     generativeimages,
@@ -35,7 +36,7 @@ from . import (
 )
 from .lib import log
 
-log.infect(config={"*": "WARNING"})
+log.infect(config={"mediatools": "INFO"})
 
 
 def logging_options(fn):
@@ -79,6 +80,7 @@ def glados(verbose: int = 0, quiet: int = 0):
 
 
 glados.add_command(audiotranscribe.transcribe_cmd)
+glados.add_command(embeddings.embeddings_cmd)
 glados.add_command(texttransform.rewrite_cmd)
 glados.add_command(generativeimages.generate_cmd)
 glados.add_command(generativeimages.describe_cmd)

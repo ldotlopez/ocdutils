@@ -65,10 +65,20 @@ class TextCompletion:
 #
 class ImageDescriptor:
     @abstractmethod
-    def describe(
-        self,
-        file: Path,
-    ) -> str:
+    def describe(self, file: Path, **kwargs) -> str:
+        ...
+
+
+#
+# Embeddings
+#
+
+Embeddings = list[float]
+
+
+class EmbeddingsHandler:
+    @abstractmethod
+    def get_embeddings(self, text: str) -> Embeddings:
         ...
 
 

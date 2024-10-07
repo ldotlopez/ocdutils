@@ -139,8 +139,8 @@ def temp_filename(file: Path, *, suffix: str | None = None):
 
 
 @contextlib.contextmanager
-def temp_filepath_ctx(*args, **kwargs):
-    tmpf = temp_filename(*args, **kwargs)
+def temp_filepath_ctx(file: Path, *, suffix: str | None = None):
+    tmpf = temp_filename(file, suffix=suffix)
     yield tmpf
     tmpf.unlink()
 

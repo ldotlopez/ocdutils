@@ -197,6 +197,11 @@ def scan_and_merge(dirs: list[Path], recursive: bool = False, rm: bool = False):
         dirs, recursive=recursive, extensions=["jpg", "mp4"]
     ):
         m = dict(gr)
+        if len(m) > 2 or "mp4" not in m:
+            print(f"Warning: {m}", file=sys.stderr)
+            continue
+
+        m["jpg"] = m.get("jpg") or m.get("jpeg") or m.get("JPG") or m["JPEG"]
 
         if fs._DRY_RUN:
             print(f"# merge '{m['jpg']}' '{m['mp4']}'")

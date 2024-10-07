@@ -19,6 +19,7 @@
 
 
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -55,8 +56,8 @@ def generate(prompt: str) -> bytes:
     return ImageGeneratorFactory().generate(prompt)
 
 
-def describe(file: Path) -> str:
-    return ImageDescriptorFactory().describe(file)
+def describe(file: Path, *, prompt: str | None = None) -> str:
+    return ImageDescriptorFactory().describe(file, prompt=prompt)
 
 
 def write_comment(file: Path, comment: str):
@@ -91,13 +92,16 @@ def generate_cmd(prompt: str, output: Path | None = None) -> int:
 
 
 @click.command("describe-image")
+@click.option("--prompt", "-p", type=str, default=None, help="Prompt to use")
 @click.option(
     "--write", "-w", is_flag=True, default=False, help="Write description into file"
 )
 @click.argument("file", type=Path, nargs=-1)
-def describe_cmd(file: tuple[Path], write: bool = False) -> int:
+def describe_cmd(
+    file: tuple[Path], prompt: str | None = None, write: bool = False
+) -> int:
     for f in file:
-        desc = describe(f)
+        desc = describe(f, prompt=prompt)
         print(f"{f}: {desc}")
         if write:
             write_comment(f, desc)
