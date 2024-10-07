@@ -84,7 +84,7 @@ class OpenAI(
 
         yield openai.OpenAI(**kwargs)
 
-    def complete(
+    def chat_completion(
         self, system: str, text: str, *, model: str = OPENAI_CHAT_MODEL
     ) -> str:
         messages = [
