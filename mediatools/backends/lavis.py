@@ -133,11 +133,7 @@ class LAVIS:
 
         return m, p
 
-    def describe(self, file: Path) -> str:
-        img = Image.open(file)
-        if isinstance(image, (str, Path)):
-            image = Image.open(image)
-
-        image = image.convert("RGB")
+    def describe_image(self, file: Path) -> str:
+        image = Image.open(file).convert("RGB")
         image = self.vis_processors["eval"](image).unsqueeze(0).to(self.device)
         return self.model.generate({"image": image})[0]

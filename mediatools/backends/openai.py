@@ -97,10 +97,15 @@ class OpenAI(
 
         return resp.choices[0].message.content.strip()
 
-    def get_embeddings(self, text: str) -> list[float]:
+    def get_embeddings_as_response(
+        self, text: str
+    ) -> openai.types.create_embedding_response.CreateEmbeddingResponse:
         with self.custom_api() as client:
-            ret = client.embeddings.create(input=text, model=OPENAI_EMBEDDINGS_MODEL)
-            return ret.data[0].embedding
+            return client.embeddings.create(input=text, model=OPENAI_EMBEDDINGS_MODEL)
+
+    def get_embeddings(self, text: str) -> list[float]:
+        resp = self.get_embeddings_as_response(text)
+        return resp.data[0].embedding
 
     def generate_image(self, prompt: str) -> bytes:
         with self.custom_api() as client:
