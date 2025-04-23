@@ -7,7 +7,6 @@ universal = 1
 
 [project]
 name = "mediatools"
-version = "0.0.0"
 dependencies = [
     "appdirs",
     "click",
@@ -27,17 +26,21 @@ dependencies = [
 readme = "README.md"
 description = "File (and media) manipulation tools"
 license = {file = "LICENSE"}
-
+dynamic = [
+  "version",
+]
 
 [tool.setuptools]
 packages = ["mediatools", "mediatools.lib", "mediatools.backends"]
+
+[tool.setuptools.dynamic]
+version = { attr = "mediatools.__version__" }
 
 [tool.black]
 target-version = ['py311']
 
 [tool.isort]
 profile = "black"
-
 
 [project.scripts]
 mediatool = "mediatools.cli:mediatool"
