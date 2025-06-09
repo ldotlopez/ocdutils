@@ -152,6 +152,24 @@ class BackendDefer:
         return importlib.import_module(name)
 
 
+def BaseBackendFactory(
+    parent_module: str, envvar: str, backend=None, *, map: dict[str, str], default: str
+) -> type:
+    backend = backend or os.environ.get(envvar) or default
+
+    cls_name = map[backend]
+
+    try:
+        m = importlib.import_module(f"{parent_module}.{backend}")
+    except ImportError as e:
+        raise Exception() from e
+
+    if not hasattr(m, cls_name):
+        raise Exception()
+
+    return getattr(m, cls_name)
+
+
 # ENVIRON_KEY = "AUDIO_TRANSCRIPTOR"
 # DEFAULT_BACKEND = "openai"
 # BACKENDS = {

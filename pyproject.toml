@@ -9,6 +9,7 @@ dependencies = [
     "imagehash",
     "iso639",
     "langdetect",
+    "openai>=1.84.0",
     "openai-whisper",
     "pillow",
     "pillow-heif",
@@ -27,6 +28,8 @@ glados = "mediatools.cli:glados"
 
 [dependency-groups]
 dev = [
+    "ipdb>=0.13.13",
+    "ipython>=9.3.0",
     "pre-commit>=4.2.0",
 ]
 

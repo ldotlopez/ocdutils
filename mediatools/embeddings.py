@@ -80,6 +80,22 @@ def EmbeddingsFactory(backend: str | None = None, **kwargs) -> EmbeddingsHandler
         backend=backend, id=ENVIRON_KEY, map=BACKENDS, default=DEFAULT_BACKEND
     )(**kwargs)
 
+    # return BackendHandler()(backend)(**kwargs)
+
+
+class BaseBackendHandler:
+    def __init__(self):
+        pass
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        pass
+
+
+class BackendHandler(BaseBackendHandler):
+    BASE_MODULE = "mediatools.backends"
+    ENVIRON_VAR = "MEDIATOOLS_TEXT_EMBEDDINGS_BACKEND"
+    HANDLERS = {"openai": "openai.OpenAI"}
+
 
 @dataclasses.dataclass
 class EmbeddingsRecord:

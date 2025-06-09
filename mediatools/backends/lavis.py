@@ -21,7 +21,7 @@
 # pip install appdirs salesforce-lavis
 # https://github.com/salesforce/LAVIS#image-captioning
 
-raise SystemError("broken backend")
+# raise SystemError("broken backend")
 
 import logging
 import os

@@ -56,8 +56,9 @@ def _model_name_to_path(name: str) -> Path:
 class WhisperCpp(AudioTranscriptor):
     def __init__(
         self,
-        model_filepath: Path
-        | None = _model_name_to_path(os.environ.get("WHISPER_MODEL", DEFAULT_MODEL)),
+        model_filepath: Path | None = _model_name_to_path(
+            os.environ.get("WHISPER_MODEL", DEFAULT_MODEL)
+        ),
     ) -> None:
         if model_filepath is None:
             raise ValueError("whisper model not defined")

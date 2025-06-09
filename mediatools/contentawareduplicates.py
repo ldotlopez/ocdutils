@@ -19,6 +19,7 @@
 
 
 import logging
+import shlex
 from pathlib import Path
 
 import click
@@ -69,6 +70,8 @@ def find_duplicates_cmd(
     if not targets:
         return
 
+    execute_argv = shlex.split(execute)
+
     files = list(fs.iter_files_in_targets(targets, recursive=recursive))
     images = [x for x in files if fs.file_matches_mime(x, "image/*")]
     click.echo(f"Found {len(images)} images")
@@ -90,14 +93,16 @@ def find_duplicates_cmd(
             update_fn=update_fn,
         )
 
+    n_groups = len(dupes)
     for idx, gr in enumerate(dupes):
         pathsstr = " ".join(
             ["'" + img.as_posix().replace("'", "'") + "'" for img in gr]
         )
-        click.echo(f"Group {idx+1}: {pathsstr}")
+        click.echo(f"Group {idx+1}/{n_groups}: {pathsstr}")
 
+        print(execute_argv)
         if execute:
-            cmdl = [execute] + [x.as_posix() for x in gr]
+            cmdl = execute_argv + [x.as_posix() for x in gr]
             spawn.run(cmdl)
 
 

@@ -173,7 +173,7 @@ class OpenAI(
         model: str = OPENAI_TRANSCRIPTION_MODEL,
         language: str = OPENAI_TRANSCRIPTION_LANGUAGE,
     ) -> AudioTranscription:
-        with fs.temp_dirpath() as tmpd:
+        with fs.temp_dirpath_ctx() as tmpd:
             audio = tmpd / "transcribe.m4a"
             (
                 ffmpeg.input(file.as_posix())
@@ -195,9 +195,9 @@ class OpenAI(
                 text=resp.text.strip(),
                 segments=[
                     AudioSegment(
-                        start=x["start"] // 1_000_000_000,
-                        end=x["end"] // 1_000_000_000,
-                        text=x["text"].strip(),
+                        start=x.start // 1_000_000_000,
+                        end=x.end // 1_000_000_000,
+                        text=x.text.strip(),
                     )
                     for x in resp.segments or []
                 ],

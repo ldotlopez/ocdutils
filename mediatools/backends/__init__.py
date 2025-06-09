@@ -71,8 +71,7 @@ def deprecation(new_fn: Callable) -> Callable:
 
 class TextCompletion:
     @abstractmethod
-    def complete_chat(self, text: str, *, system: str | None) -> str:
-        ...
+    def complete_chat(self, text: str, *, system: str | None) -> str: ...
 
     @deprecation(complete_chat)
     def complete(self, text: str, *, system: str | None) -> str:  # type: ignore[empty-body]
@@ -84,8 +83,7 @@ class TextCompletion:
 #
 class ImageDescriptor:
     @abstractmethod
-    def describe_image(self, file: Path, **kwargs) -> str:
-        ...
+    def describe_image(self, file: Path, **kwargs) -> str: ...
 
     @deprecation(describe_image)
     def describe(self, system: str, text: str) -> str:  # type: ignore[empty-body]
@@ -101,8 +99,7 @@ Embeddings = list[float]
 
 class EmbeddingsHandler:
     @abstractmethod
-    def get_embeddings(self, text: str) -> Embeddings:
-        ...
+    def get_embeddings(self, text: str) -> Embeddings: ...
 
 
 #
@@ -112,8 +109,7 @@ class EmbeddingsHandler:
 
 class AudioTranscriptor:
     @abstractmethod
-    def transcribe_audio(self, file: Path, **kwargs) -> AudioTranscription:
-        ...
+    def transcribe_audio(self, file: Path, **kwargs) -> AudioTranscription: ...
 
     @deprecation(transcribe_audio)
     def transcribe(self, system: str, text: str) -> str:  # type: ignore[empty-body]
@@ -139,14 +135,12 @@ class AudioSegment:
 #
 class ImageDuplicateFinder:
     @abstractmethod
-    def find(self, images: list[Path], **kwargs):
-        ...
+    def find(self, images: list[Path], **kwargs): ...
 
 
 class ImageGenerator:
     @abstractmethod
-    def generate_image(self, prompt: str) -> bytes:
-        ...
+    def generate_image(self, prompt: str) -> bytes: ...
 
     @deprecation(generate_image)
     def generate(self, system: str, text: str) -> str:  # type: ignore[empty-body]
