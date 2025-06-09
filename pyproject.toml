@@ -1,13 +1,7 @@
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
-[bdist_wheel]
-universal = 1
-
 [project]
 name = "mediatools"
 version = "0.0.0"
+requires-python = ">=3.13"
 dependencies = [
     "appdirs",
     "click",
@@ -15,31 +9,42 @@ dependencies = [
     "imagehash",
     "iso639",
     "langdetect",
-    "openai",
     "openai-whisper",
     "pillow",
     "pillow-heif",
     "pysrt",
     "python-magic",
-    "rembg",
-    "importlib-metadata; python_version >= '3.11'",
+    "rembg>=2.0.66",
 ]
 readme = "README.md"
 description = "File (and media) manipulation tools"
-license = {file = "LICENSE"}
-
-
-[tool.setuptools]
-packages = ["mediatools", "mediatools.lib", "mediatools.backends"]
-
-[tool.black]
-target-version = ['py311']
-
-[tool.isort]
-profile = "black"
-
+license = "GPL-3.0-or-later"
 
 [project.scripts]
 mediatool = "mediatools.cli:mediatool"
 multitool = "mediatools.cli:multitool"
 glados = "mediatools.cli:glados"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[bdist_wheel]
+universal = 1
+
+[tool.setuptools]
+packages = ["mediatools", "mediatools.lib", "mediatools.backends"]
+
+[tool.black]
+target-version = ['py313']
+
+[tool.isort]
+profile = "black"
+
+[tool.uv.sources]
+openai-whisper = { git = "https://github.com/openai/whisper.git" }
