@@ -30,6 +30,7 @@ from . import (
     imgedit,
     mediahash,
     motionphotos,
+    renamers,
     sidecars,
     texttransform,
 )
@@ -53,6 +54,7 @@ def multitool(verbose: int = 0, quiet: int = 0):
 
 
 multitool.add_command(filesystemfixes.fix_extensions_cmd)
+multitool.add_command(renamers.crc32_rename_cmd)
 multitool.add_command(sidecars.sidecars_cmd)
 
 
