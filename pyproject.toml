@@ -20,9 +20,9 @@ dependencies = [
 readme = "README.md"
 description = "File (and media) manipulation tools"
 license = "GPL-3.0-or-later"
-dynamic = [
-  "version",
-]
+# dynamic = [
+#   "version",
+# ]
 
 [project.scripts]
 mediatool = "mediatools.cli:mediatool"
@@ -34,6 +34,7 @@ dev = [
     "ipdb>=0.13.13",
     "ipython>=9.3.0",
     "pre-commit>=4.2.0",
+    "ruff>=0.12.9",
 ]
 
 [build-system]

@@ -106,7 +106,48 @@ class PluginHub:
         self._ifaces[iface].register(name, obj)
 
 
-class HotLoader:
+class SymbolLoader:
+    def __init__(self) -> None:
+        self.reg: dict[str, str | ModuleType] = {}
+
+    def register(self, name: str, modstr: str, package_str: str | None = None):
+        if package_str:
+            modstr = package_str + modstr
+
+        if modstr[0] == ".":
+            raise ValueError(modstr, "Missing package name")
+
+        self.reg[name] = modstr
+
+    def get(self, name: str) -> ModuleType:
+        target = self.reg[name]
+
+        if isinstance(target, str):
+            parts = target.split(".")
+            modstr = ".".join(parts[:-1])
+            symstr = parts[-1]
+
+            try:
+                module = _get_module(modstr)
+            except ImportError:
+                raise
+
+            try:
+                symbol = getattr(module, symstr)
+            except AttributeError:
+                raise
+
+            self.reg[name] = symbol
+
+        return target  # type: ignore[return-value]
+
+
+@lru_cache
+def _get_module(modstr: str) -> ModuleType:
+    return importlib.import_module(modstr)
+
+
+class ModuleLoader:
     """A dynamic module loader that allows registering and loading modules at runtime.
 
     This class enables loading of modules by storing their names and import specs,
@@ -116,7 +157,13 @@ class HotLoader:
     def __init__(self) -> None:
         self.reg: dict[str, str | ModuleType | None] = {}
 
-    def register(self, name: str, modstr: str):
+    def register(self, name: str, modstr: str, package_str: str | None = None):
+        if package_str:
+            modstr = package_str + modstr
+
+        if modstr[0] == ".":
+            raise ValueError(modstr, "Missing package name")
+
         self.reg[name] = modstr
 
     def get(self, name: str) -> ModuleType:

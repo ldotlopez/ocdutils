@@ -18,15 +18,46 @@
 # USA.
 
 
+import functools
+import hashlib
 import zlib
 from pathlib import Path
+from typing import IO, Callable
 
 import click
 
 from .lib import filesystem as fs
 
 
-@click.command("crc32-rename")
+def _generic_digest(fh, *, algorithms: str) -> str:
+    x = hashlib.file_digest(fh, algorithms)
+    return x.hexdigest()
+
+
+DIGESTERS: dict[str, Callable] = {}
+for x in hashlib.algorithms_available:
+    fn = functools.partial(_generic_digest, algorithms=x)
+    DIGESTERS[x] = fn
+
+
+def crc32_digest(fh: IO) -> str:
+    ret = 0
+
+    while True:
+        chunk = fh.read(4096)  # Read 4KB chunks
+        if not chunk:
+            break
+
+        ret = zlib.crc32(chunk, ret)
+
+    return f"{ret:08x}"
+
+
+DIGESTERS["crc32"] = crc32_digest
+
+
+@click.command("hash-rename")
+@click.option("--algo", type=click.Choice(DIGESTERS.keys()), default="crc32")
 @click.option("--recursive", "-r", is_flag=True, default=False)
 @click.option("--force", "-f", is_flag=True, default=False)
 @click.option("--dry-run", "-n", is_flag=True, default=False)
@@ -35,6 +66,7 @@ from .lib import filesystem as fs
 def crc32_rename_cmd(
     targets,
     *,
+    algo: str,
     recursive: bool = False,
     verbose: bool = False,
     force: bool = False,
@@ -43,7 +75,10 @@ def crc32_rename_cmd(
     for src in fs.iter_files_in_targets(
         targets, recursive=recursive, error_handler=lambda x: click.echo(x, err=True)
     ):
-        dst = get_crc32_filepath(src)
+        with src.open("rb") as fh:
+            fhhash = DIGESTERS[algo](fh)
+            dst = src.parent / (fhhash + src.suffix)
+
         if dst.exists() and not force:
             click.echo(f"{src}: Destination {dst} exists", err=True)
             continue
@@ -55,69 +90,3 @@ def crc32_rename_cmd(
             return
 
         fs.safe_mv(src, dst, overwrite=force)
-
-
-def get_crc32_filepath(filepath: Path) -> Path:
-    """
-    Renames a file based on its CRC32 checksum, preserving the original extension.
-
-    Args:
-        filepath (str): The path to the file to be renamed.
-    """
-
-    crc_value = get_crc32(filepath)
-
-    # Convert CRC32 to an 8-character hexadecimal string (e.g., 'AABBCCDD')
-    crc_hex = f"{crc_value:08x}"
-
-    # Construct the new filename
-    return filepath.parent / (crc_hex + filepath.suffix)
-
-
-def get_crc32(filepath: Path) -> int:
-    """
-    Calculates the CRC32 checksum of a given file.
-
-    Args:
-        filepath (str): The path to the file.
-
-    Returns:
-        int: The CRC32 checksum as an integer.
-    """
-    # Initialize CRC to 0
-    ret = 0
-
-    # Open the file in binary read mode
-    with filepath.open("rb") as fh:
-        while True:
-            # Read file in chunks to handle large files efficiently
-            chunk = fh.read(4096)  # Read 4KB chunks
-            if not chunk:
-                break
-            # Update CRC32 value with the current chunk
-            ret = zlib.crc32(chunk, ret)
-
-    return ret
-
-
-# @click.group("filesystem-fixes")
-# def filesystem_fixes_cmd():
-#     pass
-
-
-# def iter_over(*paths: Path, recursive: bool, include_roots: bool):
-#     for root in paths:
-#         pass
-
-
-# filesystem_fixes_cmd.add_command(fix_extensions_cmd)
-
-
-# def main(*args) -> int:
-#     return filesystem_fixes_cmd(*args) or 0
-
-
-# if __name__ == "__main__":
-#     import sys
-
-#     sys.exit(main(*sys.argv))
