@@ -63,14 +63,19 @@ def _with_convert_cmdl(
     )
 
 
-def mp4ize(video: Path, *, fallback_acodec: str | None = None, overwrite: bool) -> Path:
+def mp4ize(video: Path, *, auto_encode: bool = False, overwrite: bool) -> Path:
     def convert(src: Path, dst: Path):
-        acodecs = ["copy"]
-        if fallback_acodec:
-            acodecs.append(fallback_acodec)
+        attempts = [("copy", "copy")]
+        if auto_encode:
+            attempts.extend(
+                [
+                    ("copy", "aac"),
+                    ("libx264", "aac"),
+                ]
+            )
 
         ffmpeg_ok = False
-        for idx, ca in enumerate(acodecs):
+        for idx, (vcodec, acodec) in enumerate(attempts):
             try:
                 cmdl = [
                     "ffmpeg",
@@ -80,9 +85,9 @@ def mp4ize(video: Path, *, fallback_acodec: str | None = None, overwrite: bool) 
                     "-i",
                     src.as_posix(),
                     "-c:v",
-                    "copy",
+                    vcodec,
                     "-c:a",
-                    ca,
+                    acodec,
                     dst.as_posix(),
                 ]
                 if fs._DRY_RUN:
@@ -97,7 +102,7 @@ def mp4ize(video: Path, *, fallback_acodec: str | None = None, overwrite: bool) 
                 if dst.exists():
                     dst.unlink()
 
-                if idx + 1 == len(acodecs):
+                if idx + 1 == len(attempts):
                     raise
 
         if not ffmpeg_ok:
@@ -118,6 +123,7 @@ def formats_cmd():
 
 @click.command("mp4ize")
 @click.option("--overwrite", is_flag=True, default=False)
+@click.option("--auto-encode", is_flag=True, default=False)
 @click.option("--recursive", "-r", is_flag=True, default=False)
 @click.option("--rm", is_flag=True, default=False)
 @click.option("--verbose", "-v", is_flag=True, default=False)
@@ -127,6 +133,7 @@ def mp4ize_cmd(
     *,
     format: str = "mp4",
     overwrite: bool = False,
+    auto_encode: bool = False,
     recursive: bool = True,
     rm: bool = False,
     verbose: bool = False,
@@ -135,7 +142,7 @@ def mp4ize_cmd(
     g = (x for x in g if fs.matches_mime(x, "video/*"))
 
     for v in g:
-        remuxed = mp4ize(v, fallback_acodec="aac", overwrite=overwrite)
+        remuxed = mp4ize(v, auto_encode=auto_encode, overwrite=overwrite)
         if verbose:
             print(f"'{v}' -> '{remuxed}'")
 
