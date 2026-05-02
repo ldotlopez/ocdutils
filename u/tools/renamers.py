@@ -76,7 +76,8 @@ def rename_cmd(
             *targets,
             recursive=recursive,
             error_handler=lambda x: click.echo(x, err=True),
-        )
+        ),
+        disable=True,
     ):
         with src.open("rb") as fh:
             fhhash = DIGESTERS[algo](fh)
@@ -89,7 +90,5 @@ def rename_cmd(
         if dry_run or verbose:
             print(f"mv '{src!s}' '{dst!s}'")
 
-        if dry_run:
-            return
-
-        # fslib.safe_mv(src, dst, overwrite=force)
+        if not dry_run:
+            fslib.safe_mv(src, dst, overwrite=force)

@@ -36,7 +36,7 @@ class DBFile:
         # if self.row_factory is not DBFile.row_factory:
         #     self._db.row_factory = self.row_factory
 
-        LOGGER.debug(f"New {self.__class__.__name__} for '{filepath}'")
+        LOGGER.debug(f"New {self.__class__.__name__} from '{filepath}'")
 
     def row_factory(self, cursor: sqlite3.Cursor, row: tuple[Any, ...]) -> Any:
         """Override if you want custom row mapping."""
@@ -247,7 +247,7 @@ class Codecs:
     def json_unserialize(cls, raw: bytes) -> Any:
         try:
             return json.loads(raw)
-        except (json.JSONDecodeError, UnicodeError) as e:
+        except (json.JSONDecodeError, UnicodeError, TypeError) as e:
             raise ValueError() from e
 
     @classmethod

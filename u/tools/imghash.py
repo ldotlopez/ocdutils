@@ -10,10 +10,12 @@ import rich.progress
 import rich_click as click
 from PIL import Image
 
-from ..consts import FILE_OPERATIONS_CACHE_PATH, RICH_PROGRESS_ENABLED
+from ..consts import FILE_OPERATIONS_CACHE_PATH, RICH_PROGRESS_DISABLED
 from ..lib.clilib import target_options
 from ..lib.fileopcache import Codecs, FileOperationCache, Validators
 from ..lib.fslib import file_matches_mime, iter_files
+
+RICH_PROGRESS_ENABLED = True
 
 
 class AverageHashStore(FileOperationCache):
@@ -74,7 +76,7 @@ def img_hash_cmd(
 
     store = AverageHashStore(cache_db if not no_cache else None, size=hash_size)
 
-    for img in rich.progress.track(images, disable=RICH_PROGRESS_ENABLED):
+    for img in rich.progress.track(images, disable=RICH_PROGRESS_DISABLED):
         h = store.get(img)
         rich.print(f"'{img}': {h}")
 
