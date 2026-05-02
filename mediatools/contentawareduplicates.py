@@ -70,7 +70,7 @@ def find_duplicates_cmd(
     if not targets:
         return
 
-    execute_argv = shlex.split(execute)
+    execute_argv = shlex.split(execute) if execute else []
 
     files = list(fs.iter_files_in_targets(targets, recursive=recursive))
     images = [x for x in files if fs.file_matches_mime(x, "image/*")]
@@ -100,8 +100,7 @@ def find_duplicates_cmd(
         )
         click.echo(f"Group {idx+1}/{n_groups}: {pathsstr}")
 
-        print(execute_argv)
-        if execute:
+        if execute_argv:
             cmdl = execute_argv + [x.as_posix() for x in gr]
             spawn.run(cmdl)
 
